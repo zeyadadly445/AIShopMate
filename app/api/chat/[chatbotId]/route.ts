@@ -224,19 +224,39 @@ async function generateStreamingResponse(
         const reader = response.body?.getReader()
         const decoder = new TextDecoder()
         let accumulatedContent = ''
+        let chunkCount = 0
+        let totalBytes = 0
+        const startTime = Date.now()
+        let lastChunkTime = startTime
+        let maxDelay = 0
+        let delayCount = 0
 
         if (!reader) {
           controller.error(new Error('No response body'))
           return
         }
 
+        console.log('🎬 STREAMING PERFORMANCE MONITOR STARTED')
+        console.log(`⏰ Start time: ${new Date(startTime).toISOString()}`)
+
         try {
           while (true) {
+            const chunkStartTime = Date.now()
             const { done, value } = await reader.read()
+            const chunkEndTime = Date.now()
+            const readDelay = chunkEndTime - chunkStartTime
             
             if (done) {
-              console.log('✅ Stream completed (Local Storage Mode - No DB saving)')
-              console.log(`✅ AI Response Length: ${accumulatedContent.length} characters`)
+              const totalTime = Date.now() - startTime
+              console.log('✅ STREAMING PERFORMANCE SUMMARY:')
+              console.log(`📊 Total time: ${totalTime}ms`)
+              console.log(`📦 Total chunks: ${chunkCount}`)
+              console.log(`📏 Total bytes: ${totalBytes}`)
+              console.log(`📈 Average chunk size: ${Math.round(totalBytes / chunkCount || 0)} bytes`)
+              console.log(`⏱️ Average time per chunk: ${Math.round(totalTime / chunkCount || 0)}ms`)
+              console.log(`🐌 Max delay between chunks: ${maxDelay}ms`)
+              console.log(`⚠️ Delays over 1000ms: ${delayCount}`)
+              console.log(`🔤 Final response length: ${accumulatedContent.length} characters`)
               
               // Update message count only (no conversation saving)
               if (subscription && accumulatedContent.trim()) {
@@ -250,6 +270,25 @@ async function generateStreamingResponse(
               controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
               controller.close()
               break
+            }
+
+            // Track timing and delays
+            const timeSinceLastChunk = chunkStartTime - lastChunkTime
+            if (timeSinceLastChunk > maxDelay) {
+              maxDelay = timeSinceLastChunk
+            }
+            if (timeSinceLastChunk > 1000) { // Delays over 1 second
+              delayCount++
+              console.log(`🐌 SIGNIFICANT DELAY: ${timeSinceLastChunk}ms since last chunk`)
+            }
+
+            chunkCount++
+            totalBytes += value.length
+            lastChunkTime = chunkEndTime
+
+            // Log every 10th chunk for monitoring
+            if (chunkCount % 10 === 0) {
+              console.log(`📦 Chunk ${chunkCount}: ${value.length} bytes, read delay: ${readDelay}ms, since last: ${timeSinceLastChunk}ms`)
             }
 
             const chunk = decoder.decode(value, { stream: true })
@@ -281,7 +320,9 @@ async function generateStreamingResponse(
             }
           }
         } catch (streamError) {
-          console.error('Stream error:', streamError)
+          const errorTime = Date.now() - startTime
+          console.error(`❌ STREAMING ERROR after ${errorTime}ms:`, streamError)
+          console.error(`📊 Processed ${chunkCount} chunks, ${totalBytes} bytes before error`)
           controller.error(streamError)
         }
       }

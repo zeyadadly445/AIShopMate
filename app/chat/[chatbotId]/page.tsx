@@ -224,10 +224,47 @@ export default function ChatPage({ params }: ChatPageProps) {
 
       console.log('🚀 Starting to read stream...')
 
+      // 🎬 FRONTEND STREAMING MONITOR
+      let frontendChunkCount = 0
+      let frontendStartTime = Date.now()
+      let lastFrontendChunk = frontendStartTime
+      let frontendMaxDelay = 0
+      let frontendDelayCount = 0
+
+      console.log('🎬 FRONTEND STREAMING MONITOR STARTED')
+
       while (true) {
+        const chunkReceiveStartTime = Date.now()
         const { done, value } = await reader.read()
+        const chunkReceiveEndTime = Date.now()
+        
+        const receiveDelay = chunkReceiveEndTime - chunkReceiveStartTime
+        const timeSinceLastFrontendChunk = chunkReceiveStartTime - lastFrontendChunk
+
+        if (timeSinceLastFrontendChunk > frontendMaxDelay) {
+          frontendMaxDelay = timeSinceLastFrontendChunk
+        }
+
+        if (timeSinceLastFrontendChunk > 1000) {
+          frontendDelayCount++
+          console.log(`🐌 FRONTEND DELAY: ${timeSinceLastFrontendChunk}ms between chunks`)
+        }
+
+        frontendChunkCount++
+        lastFrontendChunk = chunkReceiveEndTime
+
+        // Log every 5th chunk
+        if (frontendChunkCount % 5 === 0) {
+          console.log(`📥 Frontend chunk ${frontendChunkCount}: receive delay ${receiveDelay}ms, gap ${timeSinceLastFrontendChunk}ms`)
+        }
         
         if (done) {
+          const frontendTotalTime = Date.now() - frontendStartTime
+          console.log('✅ FRONTEND STREAMING SUMMARY:')
+          console.log(`📊 Frontend total time: ${frontendTotalTime}ms`)
+          console.log(`📦 Frontend chunks received: ${frontendChunkCount}`)
+          console.log(`🐌 Frontend max delay: ${frontendMaxDelay}ms`)
+          console.log(`⚠️ Frontend delays over 1s: ${frontendDelayCount}`)
           console.log('✅ Stream completed')
           break
         }
