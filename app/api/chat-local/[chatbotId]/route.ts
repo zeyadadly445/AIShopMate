@@ -82,7 +82,7 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
 `
 
     // 3. Generate AI response
-    let aiResponse = `مرحباً! أنا مساعد ${merchant.businessName}. شكراً لرسالتك. كيف يمكنني مساعدتك اليوم؟`
+    let aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory)
     let aiDebug: any = { success: false, error: 'not attempted', stage: 'init' }
 
     try {
@@ -91,10 +91,10 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
 
       if (!chuteAIApiKey) {
         aiDebug = { success: false, error: 'API key not found', stage: 'env_check' }
-        console.log('⚠️ AI API key not found, using fallback')
+        console.log('⚠️ AI API key not found, using smart fallback')
         return NextResponse.json({ 
           response: aiResponse,
-          debug: { aiDebug, merchant: merchant.businessName }
+          debug: { aiDebug, merchant: merchant.businessName, fallbackUsed: true }
         })
       }
 
@@ -126,14 +126,73 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
         stream: false
       }
 
-      const response = await fetch(chuteAIUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${chuteAIApiKey}`
-        },
-        body: JSON.stringify(requestBody)
-      })
+      // Try with retry mechanism
+      let response: Response | null = null
+      let lastError = ''
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`🔄 AI API attempt ${attempt}/3`)
+          
+          response = await fetch(chuteAIUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${chuteAIApiKey}`
+            },
+            body: JSON.stringify(requestBody),
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+          })
+          
+          if (response.ok) {
+            console.log(`✅ AI API succeeded on attempt ${attempt}`)
+            break
+          } else {
+            lastError = `HTTP ${response.status}: ${await response.text()}`
+            console.log(`❌ AI API failed attempt ${attempt}: ${lastError}`)
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Progressive delay
+            }
+          }
+        } catch (fetchError) {
+          lastError = fetchError instanceof Error ? fetchError.message : String(fetchError)
+          console.log(`❌ AI API error attempt ${attempt}: ${lastError}`)
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        aiDebug = { 
+          success: false, 
+          error: `All retry attempts failed. Last error: ${lastError}`, 
+          stage: 'retry_exhausted',
+          attempts: 3
+        }
+        console.log('❌ All AI API retry attempts failed, using smart fallback')
+        
+        // Update the smart fallback to indicate AI unavailable
+        aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory) + 
+                    '\n\n*ملاحظة: خدمة الذكاء الاصطناعي غير متاحة مؤقتاً، لكنني سعيد بمساعدتك!*'
+        
+        return NextResponse.json({ 
+          response: aiResponse,
+          merchant: {
+            businessName: merchant.businessName,
+            primaryColor: merchant.primaryColor
+          },
+          timestamp: new Date().toISOString(),
+          status: 'fallback_used',
+          debug: {
+            ai: aiDebug,
+            contextLength: businessContext.length,
+            historyLength: conversationHistory.length,
+            messageLength: message.length,
+            fallbackUsed: true
+          }
+        })
+      }
 
       aiDebug.stage = 'response_received'
       
@@ -231,4 +290,63 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
       { status: 500 }
     )
   }
+}
+
+// Smart fallback response generator
+function generateSmartFallback(message: string, businessName: string, conversationHistory: ChatMessage[]): string {
+  const lowerMessage = message.toLowerCase().trim()
+  
+  // Check for greetings
+  const greetings = ['مرحبا', 'هلا', 'السلام عليكم', 'أهلا', 'صباح الخير', 'مساء الخير', 'hi', 'hello']
+  if (greetings.some(greeting => lowerMessage.includes(greeting))) {
+    const timeBasedGreeting = new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'
+    return `${timeBasedGreeting}! مرحباً بك في متجر ${businessName}. كيف يمكنني مساعدتك اليوم؟ 😊`
+  }
+  
+  // Check for product inquiries
+  const productQuestions = ['عندكم', 'متوفر', 'موجود', 'أسعار', 'كم سعر', 'بكام', 'منتجات']
+  if (productQuestions.some(word => lowerMessage.includes(word))) {
+    return `بالطبع! لدينا مجموعة رائعة في ${businessName}. للحصول على أحدث المنتجات والأسعار، يمكنك تصفح متجرنا أو التواصل معنا مباشرة. هل تبحث عن شيء محدد؟`
+  }
+  
+  // Check for questions
+  const questionWords = ['كيف', 'متى', 'أين', 'ماذا', 'هل', 'ليه', 'إزاي']
+  if (questionWords.some(word => lowerMessage.includes(word)) || lowerMessage.includes('؟')) {
+    return `سؤال ممتاز! أنا هنا لمساعدتك في ${businessName}. للحصول على إجابة دقيقة ومفصلة، أنصحك بالتواصل مع فريقنا مباشرة. هل يمكنني مساعدتك في أي شيء آخر؟`
+  }
+  
+  // Check for complaints or negative words
+  const negativeWords = ['مشكلة', 'خراب', 'سيء', 'وحش', 'حمار', 'غبي']
+  if (negativeWords.some(word => lowerMessage.includes(word))) {
+    return `أعتذر إذا كان هناك أي إزعاج. نحن في ${businessName} نحرص على تقديم أفضل خدمة. يمكنك التواصل مع إدارة المتجر مباشرة لحل أي مشكلة. نقدر صبرك وتفهمك 🙏`
+  }
+  
+  // Check for thanks
+  const thankWords = ['شكرا', 'مشكور', 'تسلم', 'الله يعطيك العافية']
+  if (thankWords.some(word => lowerMessage.includes(word))) {
+    return `العفو! سعداء بخدمتك في ${businessName}. نحن هنا دائماً لمساعدتك. هل تحتاج لأي شيء آخر؟ 😊`
+  }
+  
+  // Check for contact/location questions
+  const contactWords = ['فين', 'عنوان', 'موقع', 'تليفون', 'رقم', 'تواصل']
+  if (contactWords.some(word => lowerMessage.includes(word))) {
+    return `يمكنك العثور على جميع معلومات التواصل الخاصة بـ ${businessName} في صفحتنا أو متجرنا. نحن متاحون لخدمتك! 📞`
+  }
+  
+  // Check conversation history for context
+  if (conversationHistory.length > 1) {
+    const lastMessage = conversationHistory[conversationHistory.length - 2]?.content || ''
+    if (lastMessage.includes('مرحب') || lastMessage.includes('أهلا')) {
+      return `أهلاً بك مرة أخرى! كيف يمكنني مساعدتك اليوم في ${businessName}؟`
+    }
+  }
+  
+  // Default intelligent response
+  const responses = [
+    `شكراً لتواصلك مع ${businessName}! أنا هنا لمساعدتك. يمكنك سؤالي عن أي شيء تريد معرفته.`,
+    `مرحباً بك في ${businessName}! كيف يمكنني تقديم المساعدة لك اليوم؟`,
+    `أهلاً! سعداء بوجودك في ${businessName}. ما الذي تبحث عنه اليوم؟`
+  ]
+  
+  return responses[Math.floor(Math.random() * responses.length)]
 } 
