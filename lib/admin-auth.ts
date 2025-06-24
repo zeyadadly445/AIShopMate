@@ -11,7 +11,8 @@ const ADMIN_CREDENTIALS = {
   adminId: process.env.ADMIN_ID || 'admin_master_2024'
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g4h'
+// JWT Secret منفصل للمدير لتجنب التضارب مع Supabase
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'admin-ai-shop-mate-secret-2024-secure-key-for-admin-panel-authentication'
 
 export interface AdminSession {
   adminId: string
@@ -55,7 +56,7 @@ export class AdminAuthService {
       isAdmin: true
     }
 
-    return jwt.sign(payload, JWT_SECRET, { 
+    return jwt.sign(payload, ADMIN_JWT_SECRET, { 
       expiresIn: '24h', // انتهاء الصلاحية خلال 24 ساعة
       issuer: 'ai-shop-mate-admin',
       audience: 'admin-panel'
@@ -71,7 +72,7 @@ export class AdminAuthService {
         return null
       }
 
-      const decoded = jwt.verify(token, JWT_SECRET, {
+      const decoded = jwt.verify(token, ADMIN_JWT_SECRET, {
         issuer: 'ai-shop-mate-admin',
         audience: 'admin-panel'
       }) as AdminSession

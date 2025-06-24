@@ -9,7 +9,7 @@
 ADMIN_USERNAME=admin_zeyad
 ADMIN_PASSWORD=Admin@2024!
 ADMIN_ID=admin_master_2024
-JWT_SECRET=your-super-secret-jwt-key-here
+ADMIN_JWT_SECRET=admin-ai-shop-mate-secret-2024
 ```
 
 ## 🔐 الطريقة المتقدمة (للأمان الإضافي)
@@ -21,7 +21,7 @@ JWT_SECRET=your-super-secret-jwt-key-here
 ADMIN_USERNAME=admin_zeyad
 ADMIN_PASSWORD_HASH=$2b$12$egnqIRrdQrahfcMxnkeEXuM6DIj9PsbVM1BTZOd.h7cDCmWFV3WpC
 ADMIN_ID=admin_master_2024
-JWT_SECRET=your-super-secret-jwt-key-here
+ADMIN_JWT_SECRET=admin-ai-shop-mate-secret-2024
 ```
 
 **ملاحظة هامة:** النظام يدعم الطريقتين! إذا كان `ADMIN_PASSWORD_HASH` موجود، سيتم استخدامه. وإلا سيتم استخدام `ADMIN_PASSWORD`.
@@ -70,7 +70,7 @@ ADMIN_PASSWORD_HASH=الـ_hash_الجديد
 | `ADMIN_USERNAME` | `admin_zeyad`       |
 | `ADMIN_PASSWORD` | `Admin@2024!`       |
 | `ADMIN_ID`       | `admin_master_2024` |
-| `JWT_SECRET`     | `your-super-secret-jwt-key-here` |
+| `ADMIN_JWT_SECRET` | `admin-ai-shop-mate-secret-2024` |
 
 ### الطريقة المتقدمة:
 
@@ -79,7 +79,7 @@ ADMIN_PASSWORD_HASH=الـ_hash_الجديد
 | `ADMIN_USERNAME`      | `admin_zeyad`                                                  |
 | `ADMIN_PASSWORD_HASH` | `$2b$12$egnqIRrdQrahfcMxnkeEXuM6DIj9PsbVM1BTZOd.h7cDCmWFV3WpC` |
 | `ADMIN_ID`            | `admin_master_2024`                                            |
-| `JWT_SECRET`          | `your-super-secret-jwt-key-here`                               |
+| `ADMIN_JWT_SECRET`    | `admin-ai-shop-mate-secret-2024`                               |
 
 ## 🔍 اختبار بيانات الدخول
 
