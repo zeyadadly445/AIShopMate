@@ -1,79 +1,95 @@
+// تشغيل اختبار تسجيل دخول المدير
 const bcrypt = require('bcryptjs')
 
-// محاكاة بيانات المدير كما هي في النظام
-const ADMIN_CREDENTIALS = {
-  username: process.env.ADMIN_USERNAME || 'admin_zeyad',
-  passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2b$12$egnqIRrdQrahfcMxnkeEXuM6DIj9PsbVM1BTZOd.h7cDCmWFV3WpC',
-  adminId: process.env.ADMIN_ID || 'admin_master_2024'
-}
-
 async function testAdminLogin() {
-  console.log('🔐 اختبار تسجيل دخول المدير...\n')
-  
+  console.log('🧪 اختبار نظام تسجيل دخول المدير\n')
+
   // بيانات الاختبار
-  const testUsername = 'admin_zeyad'
-  const testPassword = 'Admin@2024!'
-  
-  console.log('📋 بيانات الاختبار:')
-  console.log('اسم المستخدم:', testUsername)
-  console.log('كلمة المرور:', testPassword)
-  console.log('\n📋 بيانات النظام:')
-  console.log('اسم المستخدم المطلوب:', ADMIN_CREDENTIALS.username)
-  console.log('Hash المحفوظ:', ADMIN_CREDENTIALS.passwordHash)
-  
-  // اختبار اسم المستخدم
-  console.log('\n🔍 اختبار اسم المستخدم...')
-  const usernameMatch = testUsername === ADMIN_CREDENTIALS.username
-  console.log(usernameMatch ? '✅ اسم المستخدم صحيح' : '❌ اسم المستخدم خطأ')
-  
-  if (!usernameMatch) {
-    console.log('💡 المتوقع:', ADMIN_CREDENTIALS.username)
-    console.log('💡 المرسل:', testUsername)
-    return false
+  const testCredentials = {
+    username: 'admin_zeyad',
+    password: 'Admin@2024!'
   }
-  
-  // اختبار كلمة المرور
-  console.log('\n🔍 اختبار كلمة المرور...')
-  try {
-    const passwordMatch = await bcrypt.compare(testPassword, ADMIN_CREDENTIALS.passwordHash)
-    console.log(passwordMatch ? '✅ كلمة المرور صحيحة' : '❌ كلمة المرور خطأ')
-    
-    if (!passwordMatch) {
-      console.log('💡 جرب توليد hash جديد لكلمة المرور')
-      console.log('💡 تشغيل: node scripts/generate-admin-hash.js')
-    }
-    
-    return passwordMatch
-  } catch (error) {
-    console.log('❌ خطأ في التحقق من كلمة المرور:', error.message)
-    return false
+
+  // قراءة بيانات المدير من متغيرات البيئة
+  const adminCredentials = {
+    username: process.env.ADMIN_USERNAME || 'admin_zeyad',
+    password: process.env.ADMIN_PASSWORD || 'Admin@2024!',
+    passwordHash: process.env.ADMIN_PASSWORD_HASH,
+    adminId: process.env.ADMIN_ID || 'admin_master_2024'
   }
-}
 
-async function testNewHash() {
-  console.log('\n🔧 توليد hash جديد للتأكد...')
-  const password = 'Admin@2024!'
-  const newHash = await bcrypt.hash(password, 12)
-  console.log('Hash جديد:', newHash)
+  console.log('📋 بيانات المدير من متغيرات البيئة:')
+  console.log(`Username: ${adminCredentials.username}`)
   
-  const isValid = await bcrypt.compare(password, newHash)
-  console.log('التحقق من الـ hash الجديد:', isValid ? '✅ صحيح' : '❌ خطأ')
-  
-  return newHash
-}
-
-async function main() {
-  const loginSuccess = await testAdminLogin()
-  
-  if (!loginSuccess) {
-    console.log('\n🔄 سأولد hash جديد...')
-    const newHash = await testNewHash()
-    console.log('\n📋 استخدم هذا الـ hash في متغيرات البيئة:')
-    console.log(`ADMIN_PASSWORD_HASH=${newHash}`)
+  if (adminCredentials.passwordHash) {
+    console.log('🔐 يستخدم كلمة مرور مشفرة (الطريقة المتقدمة)')
+    console.log(`Password Hash: ${adminCredentials.passwordHash}`)
   } else {
-    console.log('\n🎉 تسجيل الدخول سيعمل بنجاح!')
-    console.log('✅ يمكنك الآن استخدام لوحة الإدارة')
+    console.log('🔓 يستخدم كلمة مرور عادية (الطريقة المبسطة)')
+    console.log(`Password: ${adminCredentials.password}`)
+  }
+  
+  console.log(`Admin ID: ${adminCredentials.adminId}\n`)
+
+  // اختبار التحقق من اسم المستخدم
+  console.log('🔍 اختبار اسم المستخدم...')
+  if (testCredentials.username === adminCredentials.username) {
+    console.log('✅ اسم المستخدم صحيح\n')
+  } else {
+    console.log('❌ اسم المستخدم خطأ\n')
+    return
+  }
+
+  // اختبار التحقق من كلمة المرور
+  console.log('🔍 اختبار كلمة المرور...')
+  
+  let isPasswordValid = false
+  
+  if (adminCredentials.passwordHash) {
+    // استخدام الطريقة المشفرة
+    console.log('🔐 التحقق باستخدام Hash...')
+    isPasswordValid = await bcrypt.compare(testCredentials.password, adminCredentials.passwordHash)
+  } else {
+    // استخدام الطريقة المباشرة
+    console.log('🔓 التحقق المباشر...')
+    isPasswordValid = testCredentials.password === adminCredentials.password
+  }
+
+  if (isPasswordValid) {
+    console.log('✅ كلمة المرور صحيحة\n')
+    console.log('🎉 نجح تسجيل الدخول!')
+    console.log('🚀 يمكنك الآن الدخول إلى /admin/login')
+  } else {
+    console.log('❌ كلمة المرور خطأ\n')
+  }
+
+  // إنشاء hash جديد إذا كان مطلوباً
+  if (process.argv.includes('--generate-hash')) {
+    console.log('\n🔐 إنشاء Hash جديد لكلمة المرور...')
+    const newPassword = process.argv[process.argv.indexOf('--generate-hash') + 1] || testCredentials.password
+    const newHash = await bcrypt.hash(newPassword, 12)
+    console.log(`Password: ${newPassword}`)
+    console.log(`Hash: ${newHash}`)
+    console.log('\nأضف هذا إلى متغيرات البيئة:')
+    console.log(`ADMIN_PASSWORD_HASH=${newHash}`)
   }
 }
 
-main().catch(console.error) 
+// تشغيل الاختبار
+testAdminLogin().catch(console.error)
+
+// معلومات الاستخدام
+if (process.argv.includes('--help')) {
+  console.log(`
+📖 طرق الاستخدام:
+
+# اختبار بسيط
+node scripts/test-admin-login.js
+
+# إنشاء hash جديد
+node scripts/test-admin-login.js --generate-hash كلمة_المرور_الجديدة
+
+# عرض المساعدة
+node scripts/test-admin-login.js --help
+  `)
+} 

@@ -4,8 +4,10 @@ import bcrypt from 'bcryptjs'
 // بيانات المدير من متغيرات البيئة
 const ADMIN_CREDENTIALS = {
   username: process.env.ADMIN_USERNAME || 'admin_zeyad',
-  // كلمة مرور مشفرة من متغير البيئة أو default صحيح
-  passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2b$12$egnqIRrdQrahfcMxnkeEXuM6DIj9PsbVM1BTZOd.h7cDCmWFV3WpC',
+  // كلمة مرور عادية (أسهل للإدارة)
+  password: process.env.ADMIN_PASSWORD || 'Admin@2024!',
+  // كلمة مرور مشفرة (للأمان المتقدم - اختياري)
+  passwordHash: process.env.ADMIN_PASSWORD_HASH,
   adminId: process.env.ADMIN_ID || 'admin_master_2024'
 }
 
@@ -29,8 +31,13 @@ export class AdminAuthService {
         return false
       }
       
-      const isValid = await bcrypt.compare(password, ADMIN_CREDENTIALS.passwordHash)
-      return isValid
+      // إذا كان هناك hash مشفر، استخدمه (للأمان المتقدم)
+      if (ADMIN_CREDENTIALS.passwordHash) {
+        return await bcrypt.compare(password, ADMIN_CREDENTIALS.passwordHash)
+      }
+      
+      // وإلا، مقارنة مباشرة مع كلمة المرور (للسهولة)
+      return password === ADMIN_CREDENTIALS.password
     } catch (error) {
       console.error('Error validating admin:', error)
       return false
