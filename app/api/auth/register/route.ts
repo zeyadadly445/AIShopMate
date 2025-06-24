@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { hashPassword, signToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
@@ -20,6 +19,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Import prisma dynamically
+    const { prisma } = await import('@/lib/prisma')
 
     // Check if email already exists
     const existingMerchant = await prisma.merchant.findUnique({

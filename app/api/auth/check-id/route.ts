@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,20 +19,38 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if chatbotId exists
-    const existingMerchant = await prisma.merchant.findUnique({
-      where: { chatbotId }
-    })
+    // Try to connect to database
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      
+      // Check if chatbotId exists
+      const existingMerchant = await prisma.merchant.findUnique({
+        where: { chatbotId }
+      })
 
-    return NextResponse.json({
-      available: !existingMerchant,
-      chatbotId
-    })
+      return NextResponse.json({
+        available: !existingMerchant,
+        chatbotId
+      })
+
+    } catch (dbError) {
+      console.error('Database error in check-id:', dbError)
+      
+      // Fallback: assume available for now
+      return NextResponse.json({
+        available: true,
+        chatbotId,
+        warning: 'Database check failed, assuming available'
+      })
+    }
 
   } catch (error) {
     console.error('Check ID error:', error)
     return NextResponse.json(
-      { error: 'حدث خطأ في الخادم' },
+      { 
+        error: 'حدث خطأ في الخادم',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
