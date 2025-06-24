@@ -328,7 +328,7 @@ export default function DashboardPage() {
                 type="text"
                 value={`${typeof window !== 'undefined' ? window.location.origin : 'https://ai-shop-mate.vercel.app'}/chat/${stats.merchant.chatbotId}`}
                 readOnly
-                className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                className="flex-1 p-2 border border-gray-300 rounded text-sm text-gray-900"
               />
               <button
                 onClick={() => navigator.clipboard.writeText(`${window.location.origin}/chat/${stats.merchant.chatbotId}`)}

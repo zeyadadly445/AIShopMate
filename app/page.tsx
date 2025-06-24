@@ -162,7 +162,7 @@ export default function Home() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">الأساسية</h3>
             <div className="text-3xl font-bold text-blue-600 mb-4">مجاناً</div>
             <p className="text-gray-900 mb-6">مثالية للبدء</p>
-            <ul className="text-right space-y-3 mb-8">
+            <ul className="text-right space-y-3 mb-8 text-gray-900">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -194,7 +194,7 @@ export default function Home() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">المتقدمة</h3>
             <div className="text-3xl font-bold text-blue-600 mb-4">$29<span className="text-lg text-gray-900">/شهر</span></div>
             <p className="text-gray-900 mb-6">للمتاجر المتنامية</p>
-            <ul className="text-right space-y-3 mb-8">
+            <ul className="text-right space-y-3 mb-8 text-gray-900">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -229,7 +229,7 @@ export default function Home() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">المؤسسية</h3>
             <div className="text-3xl font-bold text-blue-600 mb-4">$99<span className="text-lg text-gray-900">/شهر</span></div>
             <p className="text-gray-900 mb-6">للمتاجر الكبيرة</p>
-            <ul className="text-right space-y-3 mb-8">
+            <ul className="text-right space-y-3 mb-8 text-gray-900">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
