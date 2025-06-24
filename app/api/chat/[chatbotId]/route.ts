@@ -7,13 +7,19 @@ export async function POST(
 ) {
   try {
     const { chatbotId } = await params
+    console.log('🚀 Chat API called with chatbotId:', chatbotId)
     
     // Parse request body with error handling
     let requestBody
     try {
       requestBody = await request.json()
+      console.log('📥 Request body parsed:', { 
+        hasMessage: !!requestBody.message, 
+        hasSessionId: !!requestBody.sessionId,
+        stream: requestBody.stream 
+      })
     } catch (parseError) {
-      console.error('Error parsing request body:', parseError)
+      console.error('❌ Error parsing request body:', parseError)
       return NextResponse.json(
         { error: 'Invalid JSON in request body' },
         { status: 400 }
@@ -23,7 +29,7 @@ export async function POST(
     const { message, sessionId, conversationHistory = [], stream = true } = requestBody
 
     if (!chatbotId || !message || !sessionId) {
-      console.error('Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
+      console.error('❌ Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
       return NextResponse.json(
         { 
           error: 'chatbotId, message, and sessionId are required',
@@ -33,6 +39,7 @@ export async function POST(
       )
     }
 
+    console.log('🔍 Looking up merchant...')
     // 1. Fetch merchant data
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
@@ -57,7 +64,7 @@ export async function POST(
       .single()
 
     if (merchantError || !merchant) {
-      console.error('Merchant lookup failed:', {
+      console.error('❌ Merchant lookup failed:', {
         chatbotId,
         error: merchantError?.message,
         errorCode: merchantError?.code,
@@ -70,6 +77,8 @@ export async function POST(
       }, { status: 404 })
     }
 
+    console.log('✅ Merchant found:', merchant.businessName)
+
     // 2. Check subscription limits
     const subscription = Array.isArray(merchant.subscription) 
       ? merchant.subscription[0] 
@@ -77,6 +86,7 @@ export async function POST(
 
     if (subscription) {
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
+        console.log('❌ Subscription inactive:', subscription.status)
         return NextResponse.json(
           { response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.' },
           { status: 200 }
@@ -84,6 +94,7 @@ export async function POST(
       }
 
       if (subscription.messagesUsed >= subscription.messagesLimit) {
+        console.log('❌ Message limit exceeded:', subscription.messagesUsed, '>=', subscription.messagesLimit)
         return NextResponse.json(
           { response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.' },
           { status: 200 }
@@ -91,19 +102,30 @@ export async function POST(
       }
     }
 
+    console.log('🔍 Finding/creating conversation...')
     // 3. Find or create conversation
     let conversationId = null
     
-    const { data: existingConversation } = await supabaseAdmin
+    const { data: existingConversation, error: convFindError } = await supabaseAdmin
       .from('Conversation')
       .select('id')
       .eq('merchantId', merchant.id)
       .eq('sessionId', sessionId)
       .single()
 
+    if (convFindError && convFindError.code !== 'PGRST116') {
+      console.error('❌ Error finding conversation:', convFindError)
+      return NextResponse.json(
+        { error: 'Database error while finding conversation' },
+        { status: 500 }
+      )
+    }
+
     if (existingConversation) {
       conversationId = existingConversation.id
+      console.log('✅ Found existing conversation:', conversationId)
     } else {
+      console.log('🆕 Creating new conversation...')
       const { data: newConversation, error: convError } = await supabaseAdmin
         .from('Conversation')
         .insert({
@@ -114,15 +136,17 @@ export async function POST(
         .single()
 
       if (convError) {
-        console.error('Error creating conversation:', convError)
+        console.error('❌ Error creating conversation:', convError)
         return NextResponse.json(
           { error: 'Failed to create conversation' },
           { status: 500 }
         )
       }
       conversationId = newConversation.id
+      console.log('✅ Created new conversation:', conversationId)
     }
 
+    console.log('💾 Storing user message...')
     // 4. Store user message
     const { error: userMessageError } = await supabaseAdmin
       .from('Message')
@@ -133,18 +157,26 @@ export async function POST(
       })
 
     if (userMessageError) {
-      console.error('Error storing user message:', userMessageError)
+      console.error('⚠️ Error storing user message:', userMessageError)
+    } else {
+      console.log('✅ User message stored')
     }
 
+    console.log('📜 Getting conversation history...')
     // 5. Get conversation history
-    const { data: messageHistory } = await supabaseAdmin
+    const { data: messageHistory, error: historyError } = await supabaseAdmin
       .from('Message')
       .select('role, content, createdAt')
       .eq('conversationId', conversationId)
       .order('createdAt', { ascending: true })
       .limit(20)
 
+    if (historyError) {
+      console.error('⚠️ Error getting message history:', historyError)
+    }
+
     const conversationHistoryFromDB = messageHistory || []
+    console.log('📝 Got', conversationHistoryFromDB.length, 'messages from history')
 
     // 6. Prepare simplified context for AI (to avoid complexity issues)
     const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بشكل مفصل ومفيد.
@@ -158,13 +190,14 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
 
     // 7. Generate AI response using enhanced streaming
     if (stream) {
+      console.log('🌊 Starting enhanced streaming response...')
       // For streaming, we return the stream directly
       try {
-        console.log('🌊 Starting enhanced streaming response...')
         const streamResponse = await generateEnhancedAIStreamResponse(message, businessContext, conversationHistoryFromDB, merchant, conversationId)
         
         // Update message usage count before streaming
         if (subscription) {
+          console.log('📊 Updating message usage count...')
           const { error: updateError } = await supabaseAdmin
             .from('Subscription')
             .update({ 
@@ -173,20 +206,21 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
             .eq('merchantId', merchant.id)
 
           if (updateError) {
-            console.error('Error updating message count:', updateError)
+            console.error('⚠️ Error updating message count:', updateError)
           }
         }
 
         return streamResponse
         
       } catch (aiError) {
-        console.error('AI streaming error:', aiError)
+        console.error('❌ AI streaming error:', aiError)
         return NextResponse.json({
           error: 'AI service unavailable',
           response: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
         }, { status: 500 })
       }
     } else {
+      console.log('📝 Generating non-streaming response...')
       // Non-streaming response (fallback)
       let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
       
@@ -194,7 +228,7 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
         aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
         
       } catch (aiError) {
-        console.error('AI response error:', aiError)
+        console.error('❌ AI response error:', aiError)
         aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
       }
 
@@ -208,7 +242,7 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
         })
 
       if (aiMessageError) {
-        console.error('Error storing AI message:', aiMessageError)
+        console.error('⚠️ Error storing AI message:', aiMessageError)
       }
 
       // 9. Update message usage count
@@ -221,7 +255,7 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
           .eq('merchantId', merchant.id)
 
         if (updateError) {
-          console.error('Error updating message count:', updateError)
+          console.error('⚠️ Error updating message count:', updateError)
         }
       }
 
@@ -229,7 +263,8 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
     }
 
   } catch (error) {
-    console.error('Error in chat endpoint:', error)
+    console.error('💥 CRITICAL ERROR in chat endpoint:', error)
+    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     
     return NextResponse.json(
       { 
