@@ -56,22 +56,12 @@ export async function POST(
 
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 2. Prepare SIMPLIFIED context for AI (to avoid timeouts)
-    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية وكن مفيداً وودوداً.
-
-المحادثة الأخيرة:
-${conversationHistory.slice(-3).map((msg: ChatMessage) => 
-  `${msg.role === 'user' ? 'عميل' : 'مساعد'}: ${msg.content}`
-).join('\n')}
-`
-
-    // 3. Generate AI response
+    // 2. Generate AI response
     let aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory)
     let aiDebug: any = { success: false, error: 'not attempted', stage: 'init' }
 
     try {
       const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-      const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
 
       if (!chuteAIApiKey) {
         aiDebug = { success: false, error: 'API key not found', stage: 'env_check' }
@@ -82,64 +72,67 @@ ${conversationHistory.slice(-3).map((msg: ChatMessage) =>
         })
       }
 
-      // Calculate REDUCED max tokens to avoid timeouts
-      const maxTokens = Math.min(500, 1000) // Much smaller tokens
-
-      console.log('🤖 Calling AI API...', { maxTokens, historyLength: conversationHistory.length, messageLength: message.length })
+      console.log('🚀 Sending request exactly like working frontend...')
       aiDebug.stage = 'calling_api'
 
-      const requestBody = {
-        model: 'deepseek-ai/DeepSeek-V3-0324', // Force stable model
-        messages: [
-          {
-            role: 'user',
-            content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية على: ${message}`
-          }
-        ],
-        max_tokens: 500, // Fixed small amount
-        temperature: 0.3, // Lower temperature
-        stream: false
-      }
-
-      // Simplified single attempt (no complex retry)
-      try {
-        console.log('🔄 Single AI API attempt')
-        
-        const response = await fetch(chuteAIUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${chuteAIApiKey}`
-          },
-          body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(5000) // Shorter timeout: 5 seconds
+      // USE EXACT SAME APPROACH AS WORKING FRONTEND CODE
+      const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${chuteAIApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'deepseek-ai/DeepSeek-V3-0324',
+          messages: [
+            {
+              role: 'user',
+              content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية على: ${message}`
+            }
+          ],
+          stream: false,
+          max_tokens: 2048,
+          temperature: 0.7
         })
+      })
+      
+      console.log(`📦 Status: ${response.status}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Response received successfully')
         
-        if (response.ok) {
-          const data = await response.json()
-          const aiContent = data.choices?.[0]?.message?.content?.trim()
-          
-          if (aiContent) {
-            aiResponse = aiContent
-            aiDebug = { success: true, error: null, stage: 'success' }
-            console.log('✅ AI success with simplified approach')
-          } else {
-            throw new Error('No content in response')
+        const aiContent = data.choices?.[0]?.message?.content?.trim()
+        
+        if (aiContent) {
+          aiResponse = aiContent
+          aiDebug = { 
+            success: true, 
+            error: null, 
+            stage: 'success',
+            contentLength: aiContent.length 
           }
+          console.log('✅ AI success with exact frontend approach!', { 
+            responseLength: aiContent.length 
+          })
         } else {
-          const errorText = await response.text()
-          throw new Error(`HTTP ${response.status}: ${errorText}`)
+          aiDebug = { 
+            success: false, 
+            error: 'No content in response', 
+            stage: 'no_content',
+            responseData: data
+          }
+          console.log('❌ No content in response:', data)
         }
-      } catch (fetchError) {
+      } else {
+        const errorData = await response.json()
         aiDebug = { 
           success: false, 
-          error: fetchError instanceof Error ? fetchError.message : String(fetchError), 
-          stage: 'simplified_failed'
+          error: `HTTP ${response.status}: ${JSON.stringify(errorData)}`, 
+          stage: 'http_error',
+          status: response.status
         }
-        console.log('❌ Simplified AI failed:', fetchError)
-        
-        // Enhanced smart fallback
-        aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory)
+        console.log('❌ Error response:', errorData)
       }
 
     } catch (aiError) {
@@ -149,7 +142,7 @@ ${conversationHistory.slice(-3).map((msg: ChatMessage) =>
         stage: 'exception',
         errorType: aiError instanceof Error ? aiError.constructor.name : typeof aiError
       }
-      console.log('⚠️ AI error, using fallback:', aiError)
+      console.log('❌ Frontend-style AI failed:', aiError)
     }
 
     // 4. Return response (no database saving)
@@ -160,12 +153,12 @@ ${conversationHistory.slice(-3).map((msg: ChatMessage) =>
         primaryColor: merchant.primaryColor
       },
       timestamp: new Date().toISOString(),
-      status: 'success_local_only',
+      status: aiDebug.success ? 'success_ai' : 'success_fallback',
       debug: {
         ai: aiDebug,
-        contextLength: businessContext.length,
         historyLength: conversationHistory.length,
-        messageLength: message.length
+        messageLength: message.length,
+        fallbackUsed: !aiDebug.success
       }
     })
 
