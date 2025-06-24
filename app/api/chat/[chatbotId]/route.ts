@@ -23,6 +23,18 @@ export async function POST(
       historyLength: conversationHistory?.length
     })
 
+    // 🔍 DEBUG: Log conversation history details
+    console.log('🔍 CONVERSATION HISTORY DEBUG:')
+    console.log('History Length:', conversationHistory?.length || 0)
+    if (conversationHistory && conversationHistory.length > 0) {
+      conversationHistory.forEach((msg: any, index: number) => {
+        console.log(`Message ${index + 1}: [${msg.role}] "${msg.content?.substring(0, 50)}..."`)
+      })
+    } else {
+      console.log('❌ NO CONVERSATION HISTORY RECEIVED!')
+    }
+    console.log('Current Message:', message)
+
     // 3. Validate required fields
     if (!chatbotId || !message) {
       console.error('❌ Missing required fields')
@@ -154,13 +166,18 @@ async function generateStreamingResponse(
 
   // 2. Add conversation history as separate messages
   if (conversationHistory && conversationHistory.length > 0) {
-    conversationHistory.forEach((msg: any) => {
+    console.log('🔄 Adding conversation history to AI messages...')
+    conversationHistory.forEach((msg: any, index: number) => {
+      const cleanRole = msg.role === 'user' ? 'user' : 'assistant'
       messages.push({
-        role: msg.role === 'user' ? 'user' : 'assistant',
+        role: cleanRole,
         content: msg.content
       })
+      console.log(`📝 Added history message ${index + 1}: [${cleanRole}] "${msg.content?.substring(0, 50)}..."`)
     })
     console.log(`📝 Added ${conversationHistory.length} history messages to AI context`)
+  } else {
+    console.log('⚠️ No conversation history to add!')
   }
 
   // 3. Add current user message
@@ -170,6 +187,12 @@ async function generateStreamingResponse(
   })
 
   console.log(`🎯 Total messages sent to AI: ${messages.length} (1 system + ${conversationHistory.length} history + 1 current)`)
+  
+  // 🔍 DEBUG: Show final messages array structure  
+  console.log('🔍 FINAL MESSAGES SENT TO AI:')
+  messages.forEach((msg, index) => {
+    console.log(`${index + 1}. [${msg.role}] "${msg.content?.substring(0, 100)}..."`)
+  })
 
   try {
     const response = await fetch(apiUrl, {
@@ -213,6 +236,7 @@ async function generateStreamingResponse(
             
             if (done) {
               console.log('✅ Stream completed (Local Storage Mode - No DB saving)')
+              console.log(`✅ AI Response Length: ${accumulatedContent.length} characters`)
               
               // Update message count only (no conversation saving)
               if (subscription && accumulatedContent.trim()) {

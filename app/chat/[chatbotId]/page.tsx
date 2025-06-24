@@ -73,6 +73,9 @@ export default function ChatPage({ params }: ChatPageProps) {
           
           // Load saved messages from localStorage
           const savedMessages = localStorage.getItem(storageKey)
+          console.log('🔍 LOADING FROM LOCALSTORAGE:')
+          console.log('Storage key:', storageKey)
+          console.log('Saved data exists:', !!savedMessages)
           
           if (savedMessages) {
             try {
@@ -82,8 +85,17 @@ export default function ChatPage({ params }: ChatPageProps) {
               }))
               setMessages(parsedMessages)
               console.log('📱 Restored', parsedMessages.length, 'messages from localStorage')
+              console.log('📱 First 3 restored messages:')
+              parsedMessages.slice(0, 3).forEach((msg: any, index: number) => {
+                console.log(`  ${index + 1}. [${msg.role}] "${msg.content.substring(0, 30)}..."`)
+              })
+              console.log('📱 Last 3 restored messages:')
+              parsedMessages.slice(-3).forEach((msg: any, index: number) => {
+                console.log(`  ${index + 1}. [${msg.role}] "${msg.content.substring(0, 30)}..."`)
+              })
             } catch (error) {
-              console.error('Error parsing saved messages:', error)
+              console.error('❌ Error parsing saved messages:', error)
+              console.log('Saved data that failed to parse:', savedMessages?.substring(0, 200) + '...')
               // Start fresh if saved data is corrupted
               const welcomeMsg: Message = {
                 id: `welcome_${Date.now()}`,
@@ -92,6 +104,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 timestamp: new Date()
               }
               setMessages([welcomeMsg])
+              console.log('🆕 Started with fresh welcome message')
             }
           } else {
             // No saved messages, start with welcome message
@@ -102,6 +115,7 @@ export default function ChatPage({ params }: ChatPageProps) {
               timestamp: new Date()
             }
             setMessages([welcomeMsg])
+            console.log('🆕 No saved messages found, started with welcome message')
           }
         } else {
           console.error('Merchant not found')
@@ -119,8 +133,17 @@ export default function ChatPage({ params }: ChatPageProps) {
   // Save messages to localStorage whenever they change
   useEffect(() => {
     if (messages.length > 0 && chatbotId) {
-      localStorage.setItem(storageKey, JSON.stringify(messages))
+      const messagesToSave = messages.map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp.toISOString() // Ensure timestamp is serializable
+      }))
+      localStorage.setItem(storageKey, JSON.stringify(messagesToSave))
       console.log('💾 Saved', messages.length, 'messages to localStorage')
+      console.log('💾 Storage key:', storageKey)
+      console.log('💾 Last 3 messages saved:')
+      messages.slice(-3).forEach((msg, index) => {
+        console.log(`  ${index + 1}. [${msg.role}] "${msg.content.substring(0, 30)}..."`)
+      })
     }
   }, [messages, storageKey, chatbotId])
 
@@ -150,6 +173,13 @@ export default function ChatPage({ params }: ChatPageProps) {
     try {
       console.log('🌊 Starting streaming chat with conversation history...')
 
+      // 🔍 DEBUG: Log current messages state
+      console.log('🔍 FRONTEND DEBUG - MESSAGES STATE:')
+      console.log('Total messages in state:', updatedMessages.length)
+      updatedMessages.forEach((msg, index) => {
+        console.log(`${index + 1}. [${msg.role}] "${msg.content.substring(0, 50)}..." (${msg.timestamp.toLocaleTimeString()})`)
+      })
+
       // Prepare conversation history for AI context (last 25 messages excluding current user message)
       const conversationHistory = updatedMessages.slice(-26, -1).map(msg => ({
         role: msg.role,
@@ -158,6 +188,13 @@ export default function ChatPage({ params }: ChatPageProps) {
       }))
 
       console.log('📤 Sending with', conversationHistory.length, 'context messages')
+      
+      // 🔍 DEBUG: Log what we're sending as history
+      console.log('🔍 CONVERSATION HISTORY TO SEND:')
+      conversationHistory.forEach((msg, index) => {
+        console.log(`${index + 1}. [${msg.role}] "${msg.content.substring(0, 50)}..."`)
+      })
+      console.log('📨 Current user message:', userMessage.content)
 
       // Use the main chat endpoint with conversation history
       const response = await fetch(`/api/chat/${chatbotId}`, {
@@ -215,6 +252,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 }
                 setMessages(prev => [...prev, assistantMessage])
                 console.log('✅ Complete AI response saved to localStorage:', accumulatedMessage.length, 'characters')
+                console.log('💾 Final message content:', accumulatedMessage.substring(0, 100) + '...')
               }
               
               setStreamingMessage('')
@@ -230,7 +268,7 @@ export default function ChatPage({ params }: ChatPageProps) {
               if (content) {
                 accumulatedMessage += content
                 setStreamingMessage(accumulatedMessage)
-                console.log('📝 Streaming:', content)
+                // console.log('📝 Streaming:', content) // Too verbose
               }
             } catch (parseError) {
               console.error('Error parsing streaming data:', parseError)
