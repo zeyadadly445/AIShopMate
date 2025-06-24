@@ -441,7 +441,6 @@ export default function ChatPage({ params }: ChatPageProps) {
               <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
                 {isStreaming ? 'يكتب...' : 'متصل'}
               </span>
-              <span className="text-xs text-gray-900">• محفوظ محلياً</span>
             </div>
           </div>
         </div>
@@ -658,8 +657,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             </Button>
           </div>
           
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-900">
-            <p>اضغط Enter للإرسال • Shift + Enter للسطر الجديد</p>
+          <div className="mt-3 flex items-center justify-end text-xs text-gray-900">
             <p className="flex items-center space-x-1 rtl:space-x-reverse">
               <span>مدعوم بـ</span>
               <span className="font-semibold" style={{ color: merchant.primaryColor }}>
