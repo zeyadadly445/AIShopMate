@@ -13,6 +13,21 @@ export const prisma = {
     return db.$disconnect()
   },
   
+  async $queryRaw(query: any, ...args: any[]) {
+    const db = await getDatabase()
+    return db.$queryRaw(query, ...args)
+  },
+  
+  async $executeRaw(query: any, ...args: any[]) {
+    const db = await getDatabase()
+    return db.$executeRaw(query, ...args)
+  },
+  
+  async $transaction(operations: any) {
+    const db = await getDatabase()
+    return db.$transaction(operations)
+  },
+  
   get merchant() {
     return this._getModel('merchant')
   },

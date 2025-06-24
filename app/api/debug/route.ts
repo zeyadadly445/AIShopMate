@@ -21,13 +21,14 @@ export async function GET(request: NextRequest) {
     let prismaError = null
     
     try {
-      const { prisma } = await import('@/lib/prisma')
+      const { getDB } = await import('@/lib/prisma-simple')
+      const db = await getDB()
       
       // Try to connect to database
-      await prisma.$connect()
-      const result = await prisma.$queryRaw`SELECT 1 as test`
+      await db.$connect()
+      const result = await db.$queryRaw`SELECT 1 as test`
       prismaStatus = 'connected'
-      await prisma.$disconnect()
+      await db.$disconnect()
     } catch (error) {
       prismaStatus = 'failed'
       prismaError = error instanceof Error ? error.message : 'Unknown error'
