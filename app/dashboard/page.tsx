@@ -38,7 +38,6 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [merchantId, setMerchantId] = useState<string | null>(null)
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false)
   const router = useRouter()
 
   const fetchStats = async () => {
@@ -116,10 +115,8 @@ export default function DashboardPage() {
         console.log('📡 Subscription status:', status)
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription established successfully')
-          setIsRealtimeConnected(true)
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.log('❌ Real-time subscription failed')
-          setIsRealtimeConnected(false)
         }
       })
 
@@ -163,7 +160,6 @@ export default function DashboardPage() {
     // Cleanup function
     return () => {
       console.log('🔌 Unsubscribing from real-time channels')
-      setIsRealtimeConnected(false)
       supabase.removeChannel(subscriptionChannel)
       supabase.removeChannel(merchantChannel)
       supabase.removeChannel(messagesChannel)
@@ -243,30 +239,12 @@ export default function DashboardPage() {
               <p className="text-gray-900">مرحباً بك، {stats.merchant.businessName}</p>
             </div>
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
-              {refreshing ? (
+              {refreshing && (
                 <div className="flex items-center space-x-1 rtl:space-x-reverse text-blue-600">
                   <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                   <span className="text-sm">جاري التحديث...</span>
                 </div>
-              ) : isRealtimeConnected ? (
-                <div className="flex items-center space-x-1 rtl:space-x-reverse text-green-600">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm">متصل مباشرة</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 rtl:space-x-reverse text-gray-500">
-                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  <span className="text-sm">غير متصل</span>
-                </div>
               )}
-              <button
-                onClick={fetchStats}
-                disabled={refreshing}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
-                title="تحديث يدوي"
-              >
-                🔄
-              </button>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
@@ -463,15 +441,7 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">🚀 الخطوات التالية</h2>
-            {isRealtimeConnected && (
-              <div className="flex items-center space-x-1 rtl:space-x-reverse text-green-600 text-sm">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>التحديث المباشر مفعل</span>
-              </div>
-            )}
-          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">🚀 الخطوات التالية</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">1. إعداد مصادر البيانات</h3>
