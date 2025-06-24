@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hashPassword, signToken } from '@/lib/auth'
 
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    message: 'Supabase REST API Registration Endpoint',
+    method: 'POST',
+    status: 'ready',
+    testUrl: 'Use POST method with JSON body',
+    requiredFields: ['email', 'password', 'businessName', 'chatbotId'],
+    optionalFields: ['phone'],
+    example: {
+      email: 'test@example.com',
+      password: 'password123',
+      businessName: 'My Store',
+      chatbotId: 'mystore',
+      phone: '+1234567890'
+    }
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password, businessName, chatbotId, phone } = await request.json()
