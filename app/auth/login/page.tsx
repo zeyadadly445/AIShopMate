@@ -20,7 +20,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/login-supabase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -29,6 +29,7 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.json()
         localStorage.setItem('token', data.token)
+        localStorage.setItem('merchantData', JSON.stringify(data.merchant))
         router.push('/dashboard')
       } else {
         const data = await response.json()
