@@ -86,6 +86,7 @@ export default function RegisterPage() {
       if (response.ok) {
         const data = await response.json()
         localStorage.setItem('token', data.token)
+        localStorage.setItem('merchantData', JSON.stringify(data.merchant))
         router.push('/dashboard')
       } else {
         const data = await response.json()
