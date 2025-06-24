@@ -31,7 +31,22 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMerchant, setIsLoadingMerchant] = useState(true)
+  const [streamingMessage, setStreamingMessage] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Generate or get session ID
+  const [sessionId, setSessionId] = useState('')
+  
+  useEffect(() => {
+    // Generate a unique session ID for this browser session
+    let existingSessionId = sessionStorage.getItem('chat_session_id')
+    if (!existingSessionId) {
+      existingSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      sessionStorage.setItem('chat_session_id', existingSessionId)
+    }
+    setSessionId(existingSessionId)
+  }, [])
 
   // Storage key for this specific chatbot
   const storageKey = `chat_${chatbotId}_messages`
@@ -112,10 +127,10 @@ export default function ChatPage({ params }: ChatPageProps) {
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, streamingMessage])
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !merchant) return
+    if (!inputMessage.trim() || isLoading || !merchant || !sessionId) return
 
     const userMessage: Message = {
       id: `user_${Date.now()}`,
@@ -129,43 +144,93 @@ export default function ChatPage({ params }: ChatPageProps) {
     setMessages(updatedMessages)
     setInputMessage('')
     setIsLoading(true)
+    setIsStreaming(true)
+    setStreamingMessage('')
 
     try {
-      // Prepare conversation history for AI context (last 20 messages)
-      const conversationHistory = updatedMessages.slice(-20).map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp.toISOString()
-      }))
+      console.log('🌊 Starting streaming chat with:', chatbotId, sessionId)
 
-      console.log('📤 Sending message with', conversationHistory.length, 'context messages')
-
-      const response = await fetch(`/api/chat-local/${chatbotId}`, {
+      // Use the enhanced streaming endpoint
+      const response = await fetch(`/api/chat/${chatbotId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           message: userMessage.content,
-          conversationHistory: conversationHistory.slice(0, -1) // Don't include the current message
+          sessionId: sessionId,
+          stream: true
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        const assistantMessage: Message = {
-          id: `assistant_${Date.now()}`,
-          role: 'assistant',
-          content: data.response,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, assistantMessage])
-        console.log('✅ AI response received and saved locally')
-      } else {
-        throw new Error('Failed to get response')
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedMessage = ''
+
+      if (!reader) {
+        throw new Error('No response body reader available')
+      }
+
+      console.log('🚀 Starting to read stream...')
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) {
+          console.log('✅ Stream completed')
+          break
+        }
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            
+            if (data === '[DONE]') {
+              console.log('🏁 Stream finished signal received')
+              
+              // Add the complete message to messages array
+              if (accumulatedMessage.trim()) {
+                const assistantMessage: Message = {
+                  id: `assistant_${Date.now()}`,
+                  role: 'assistant',
+                  content: accumulatedMessage.trim(),
+                  timestamp: new Date()
+                }
+                setMessages(prev => [...prev, assistantMessage])
+                console.log('✅ Complete AI response saved:', accumulatedMessage.length, 'characters')
+              }
+              
+              setStreamingMessage('')
+              setIsStreaming(false)
+              setIsLoading(false)
+              return
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.delta || parsed.content || ''
+              
+              if (content) {
+                accumulatedMessage += content
+                setStreamingMessage(accumulatedMessage)
+                console.log('📝 Streaming:', content)
+              }
+            } catch (parseError) {
+              console.error('Error parsing streaming data:', parseError)
+            }
+          }
+        }
+      }
+
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error in streaming chat:', error)
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         role: 'assistant',
@@ -175,6 +240,8 @@ export default function ChatPage({ params }: ChatPageProps) {
       setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
+      setIsStreaming(false)
+      setStreamingMessage('')
     }
   }
 
@@ -269,8 +336,10 @@ export default function ChatPage({ params }: ChatPageProps) {
                 </svg>
               </button>
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-600 font-medium">متصل</span>
+                <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {isStreaming ? 'يكتب...' : 'متصل'}
+                </span>
                 <span className="text-xs text-gray-400">• محفوظ محلياً</span>
               </div>
             </div>
@@ -312,8 +381,25 @@ export default function ChatPage({ params }: ChatPageProps) {
             </div>
           ))}
           
-          {/* Loading indicator */}
-          {isLoading && (
+          {/* Streaming message display */}
+          {isStreaming && streamingMessage && (
+            <div className="flex justify-start">
+              <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl max-w-xs sm:max-w-md lg:max-w-lg">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingMessage}</p>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse mt-2">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                  <span className="text-xs text-blue-500">يكتب...</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Loading indicator for initial processing */}
+          {isLoading && !isStreaming && (
             <div className="flex justify-start">
               <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -322,7 +408,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500">جاري الكتابة...</span>
+                  <span className="text-sm text-gray-500">جاري التحضير...</span>
                 </div>
               </div>
             </div>
@@ -369,6 +455,9 @@ export default function ChatPage({ params }: ChatPageProps) {
               <span className="font-semibold" style={{ color: merchant.primaryColor }}>
                 AI Shop Mate
               </span>
+              {isStreaming && (
+                <span className="text-blue-500 animate-pulse">• live streaming</span>
+              )}
             </p>
           </div>
         </div>
