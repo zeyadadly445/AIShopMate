@@ -80,7 +80,7 @@ export async function POST(
 
     // 6. Prepare AI context with conversation history from frontend
     console.log('🤖 Preparing AI context with local conversation history...')
-    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة وقدم ردود مفصلة ومساعدة.`
+    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة وقدم ردود مفصلة ومساعدة. تذكر المحادثة السابقة واستخدمها في ردودك.`
     
     // Use conversation history sent from frontend (last 25 messages)
     const recentHistory = conversationHistory?.slice(-25) || []
@@ -143,16 +143,33 @@ async function generateStreamingResponse(
     throw new Error('AI API key not configured')
   }
 
-  // Build conversation context from local history
-  let conversationContext = ''
+  // Build proper messages array for AI API (CORRECT FORMAT)
+  const messages = []
+  
+  // 1. Add system message with business context
+  messages.push({
+    role: "system",
+    content: context
+  })
+
+  // 2. Add conversation history as separate messages
   if (conversationHistory && conversationHistory.length > 0) {
-    conversationContext = '\n\nمحادثة سابقة:\n' + 
-      conversationHistory.map((msg: any) => 
-        `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
-      ).join('\n')
+    conversationHistory.forEach((msg: any) => {
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })
+    })
+    console.log(`📝 Added ${conversationHistory.length} history messages to AI context`)
   }
 
-  const fullContext = context + conversationContext
+  // 3. Add current user message
+  messages.push({
+    role: "user",
+    content: message
+  })
+
+  console.log(`🎯 Total messages sent to AI: ${messages.length} (1 system + ${conversationHistory.length} history + 1 current)`)
 
   try {
     const response = await fetch(apiUrl, {
@@ -163,11 +180,9 @@ async function generateStreamingResponse(
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: "user", content: `${fullContext}\n\nالعميل: ${message}` }
-        ],
+        messages: messages, // Use proper messages array format
         stream: true,
-        max_tokens: 128000, // 128K tokens as requested
+        max_tokens: 128000,
         temperature: 0.7
       })
     })
@@ -279,16 +294,33 @@ async function generateRegularResponse(message: string, context: string, convers
     return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
   }
 
-  // Build conversation context from local history
-  let conversationContext = ''
+  // Build proper messages array for AI API (CORRECT FORMAT)
+  const messages = []
+  
+  // 1. Add system message with business context
+  messages.push({
+    role: "system",
+    content: context
+  })
+
+  // 2. Add conversation history as separate messages
   if (conversationHistory && conversationHistory.length > 0) {
-    conversationContext = '\n\nمحادثة سابقة:\n' + 
-      conversationHistory.map((msg: any) => 
-        `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
-      ).join('\n')
+    conversationHistory.forEach((msg: any) => {
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })
+    })
+    console.log(`📝 Added ${conversationHistory.length} history messages to AI context`)
   }
 
-  const fullContext = context + conversationContext
+  // 3. Add current user message
+  messages.push({
+    role: "user",
+    content: message
+  })
+
+  console.log(`🎯 Total messages sent to AI: ${messages.length} (1 system + ${conversationHistory.length} history + 1 current)`)
 
   try {
     const response = await fetch(apiUrl, {
@@ -299,11 +331,9 @@ async function generateRegularResponse(message: string, context: string, convers
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: "user", content: `${fullContext}\n\nالعميل: ${message}` }
-        ],
+        messages: messages, // Use proper messages array format
         stream: false,
-        max_tokens: 128000, // 128K tokens as requested
+        max_tokens: 128000,
         temperature: 0.7
       })
     })
