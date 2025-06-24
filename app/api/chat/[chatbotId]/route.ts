@@ -122,15 +122,19 @@ export async function POST(
         content: message
       })
 
-    // 8. Generate AI response
+    // 8. Generate AI response using the EXACT working method
     console.log('🤖 Generating AI response...')
     
+    // Using the EXACT API key and configuration from working example
+    const apiKey = "cpk_eb161cf56a904061bc4822fa69ee9743.bd57c9d531ec5ee78c0eb8d6b485a8f5.z98gs4bXvj1t3nc4Jv1kaMwO8j29usr2"
+    const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة.`
+
     if (stream) {
-      // Return streaming response
-      return await generateStreamingResponse(message, merchant, conversationId)
+      // Return streaming response with 128K tokens
+      return await generateStreamingResponse(message, context, apiKey, conversationId, subscription, merchant)
     } else {
-      // Return regular response
-      const aiResponse = await generateRegularResponse(message, merchant)
+      // Return regular response with 128K tokens
+      const aiResponse = await generateRegularResponse(message, context, apiKey)
       
       // Store AI response
       await supabaseAdmin
@@ -163,39 +167,36 @@ export async function POST(
   }
 }
 
-// Helper function for streaming response
-async function generateStreamingResponse(message: string, merchant: any, conversationId: string): Promise<Response> {
-  console.log('🌊 Starting streaming response...')
-  
-  const apiKey = process.env.CHUTES_AI_API_KEY
-  
-  if (!apiKey) {
-    console.error('❌ CHUTES_AI_API_KEY not found')
-    throw new Error('AI service not configured')
-  }
-
-  const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة.`
+// Helper function for streaming response - EXACTLY like working example but with streaming
+async function generateStreamingResponse(
+  message: string, 
+  context: string, 
+  apiKey: string, 
+  conversationId: string,
+  subscription: any,
+  merchant: any
+): Promise<Response> {
+  console.log('🌊 Starting streaming response with working configuration...')
 
   try {
-    const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://llm.chutes.ai/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
+        model: "deepseek-ai/DeepSeek-V3-0324",
         messages: [
-          {
-            role: 'user',
-            content: `${context}\n\nالعميل: ${message}`
-          }
+          { role: "user", content: `${context}\n\nالعميل: ${message}` }
         ],
-        max_tokens: 4000,
-        temperature: 0.7,
-        stream: true
+        stream: true,
+        max_tokens: 128000, // 128K tokens as agreed
+        temperature: 0.7
       })
     })
+
+    console.log(`📦 AI API Status: ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -231,10 +232,12 @@ async function generateStreamingResponse(message: string, merchant: any, convers
                   })
                 
                 // Update message count
-                await supabaseAdmin
-                  .from('Subscription')
-                  .update({ messagesUsed: merchant.subscription?.messagesUsed + 1 || 1 })
-                  .eq('merchantId', merchant.id)
+                if (subscription) {
+                  await supabaseAdmin
+                    .from('Subscription')
+                    .update({ messagesUsed: subscription.messagesUsed + 1 })
+                    .eq('merchantId', merchant.id)
+                }
               }
               
               controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
@@ -294,39 +297,29 @@ async function generateStreamingResponse(message: string, merchant: any, convers
   }
 }
 
-// Helper function for regular response
-async function generateRegularResponse(message: string, merchant: any): Promise<string> {
-  console.log('📝 Generating regular response...')
-  
-  const apiKey = process.env.CHUTES_AI_API_KEY
-  
-  if (!apiKey) {
-    console.warn('❌ CHUTES_AI_API_KEY not found')
-    return `شكراً لاهتمامك بـ ${merchant.businessName}. يرجى التواصل معنا للحصول على مساعدة أفضل.`
-  }
-
-  const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة.`
+// Helper function for regular response - EXACTLY like working example
+async function generateRegularResponse(message: string, context: string, apiKey: string): Promise<string> {
+  console.log('📝 Generating regular response with working configuration...')
 
   try {
-    const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://llm.chutes.ai/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
+        model: "deepseek-ai/DeepSeek-V3-0324",
         messages: [
-          {
-            role: 'user',
-            content: `${context}\n\nالعميل: ${message}`
-          }
+          { role: "user", content: `${context}\n\nالعميل: ${message}` }
         ],
-        max_tokens: 4000,
-        temperature: 0.7,
-        stream: false
+        stream: false,
+        max_tokens: 128000, // 128K tokens as agreed
+        temperature: 0.7
       })
     })
+
+    console.log(`📦 AI API Status: ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -335,6 +328,7 @@ async function generateRegularResponse(message: string, merchant: any): Promise<
     }
 
     const data = await response.json()
+    console.log("✅ AI Response received")
     
     if (data.choices?.[0]?.message?.content) {
       let aiResponse = data.choices[0].message.content.trim()
@@ -347,6 +341,6 @@ async function generateRegularResponse(message: string, merchant: any): Promise<
 
   } catch (error) {
     console.error('❌ AI generation error:', error)
-    return `شكراً لاهتمامك بـ ${merchant.businessName}. يرجى التواصل معنا للحصول على مساعدة أفضل.`
+    return `شكراً لاهتمامك بـ متجرنا. يرجى التواصل معنا للحصول على مساعدة أفضل.`
   }
 } 
