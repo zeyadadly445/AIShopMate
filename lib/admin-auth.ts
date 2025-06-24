@@ -126,13 +126,25 @@ export class AdminAuthService {
  * Middleware للحماية من جانب الخادم
  */
 export function requireAdminAuth(req: Request): AdminSession | null {
+  // Debug logging للتشخيص
+  console.log('🔍 RequireAdminAuth Debug:')
+  console.log('ADMIN_USERNAME:', process.env.ADMIN_USERNAME)
+  console.log('ADMIN_JWT_SECRET exists:', !!process.env.ADMIN_JWT_SECRET)
+  console.log('ADMIN_JWT_SECRET length:', process.env.ADMIN_JWT_SECRET?.length)
+  
   const authHeader = req.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) {
+    console.log('❌ No valid authorization header')
     return null
   }
 
   const token = authHeader.substring(7)
-  return AdminAuthService.verifyAdminToken(token)
+  console.log('🎫 Token received, length:', token.length)
+  
+  const result = AdminAuthService.verifyAdminToken(token)
+  console.log('🔐 Token verification result:', result ? 'SUCCESS' : 'FAILED')
+  
+  return result
 }
 
 /**
