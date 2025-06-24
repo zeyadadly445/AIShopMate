@@ -5,42 +5,34 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ chatbotId: string }> }
 ) {
+  console.log('🚀 Chat API endpoint called')
+  
   try {
+    // 1. Get chatbotId from params
     const { chatbotId } = await params
-    console.log('🚀 Chat API called with chatbotId:', chatbotId)
+    console.log('📍 ChatbotId:', chatbotId)
     
-    // Parse request body with error handling
-    let requestBody
-    try {
-      requestBody = await request.json()
-      console.log('📥 Request body parsed:', { 
-        hasMessage: !!requestBody.message, 
-        hasSessionId: !!requestBody.sessionId,
-        stream: requestBody.stream 
-      })
-    } catch (parseError) {
-      console.error('❌ Error parsing request body:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
-    }
+    // 2. Parse request body
+    const body = await request.json()
+    const { message, sessionId, stream = true } = body
+    console.log('📥 Request data:', { 
+      hasMessage: !!message, 
+      hasSessionId: !!sessionId, 
+      messageLength: message?.length,
+      stream 
+    })
 
-    const { message, sessionId, conversationHistory = [], stream = true } = requestBody
-
+    // 3. Validate required fields
     if (!chatbotId || !message || !sessionId) {
-      console.error('❌ Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
-      return NextResponse.json(
-        { 
-          error: 'chatbotId, message, and sessionId are required',
-          received: { chatbotId, hasMessage: !!message, hasSessionId: !!sessionId }
-        },
-        { status: 400 }
-      )
+      console.error('❌ Missing required fields')
+      return NextResponse.json({
+        error: 'Missing required fields',
+        required: ['chatbotId', 'message', 'sessionId']
+      }, { status: 400 })
     }
 
+    // 4. Get merchant data
     console.log('🔍 Looking up merchant...')
-    // 1. Fetch merchant data
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
       .select(`
@@ -52,81 +44,58 @@ export async function POST(
           messagesLimit,
           messagesUsed,
           status
-        ),
-        dataSources:MerchantDataSource(
-          type,
-          title,
-          url,
-          isActive
         )
       `)
       .eq('chatbotId', chatbotId)
       .single()
 
     if (merchantError || !merchant) {
-      console.error('❌ Merchant lookup failed:', {
-        chatbotId,
-        error: merchantError?.message,
-        errorCode: merchantError?.code,
-        foundMerchant: !!merchant
-      })
-      return NextResponse.json({ 
+      console.error('❌ Merchant lookup failed:', merchantError)
+      return NextResponse.json({
         error: 'Merchant not found',
-        chatbotId,
-        details: merchantError?.message || 'No merchant found with this chatbot ID'
+        details: merchantError?.message
       }, { status: 404 })
     }
-
+    
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 2. Check subscription limits
+    // 5. Check subscription status
     const subscription = Array.isArray(merchant.subscription) 
       ? merchant.subscription[0] 
       : merchant.subscription
 
     if (subscription) {
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
-        console.log('❌ Subscription inactive:', subscription.status)
-        return NextResponse.json(
-          { response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
-        )
+        return NextResponse.json({
+          response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.'
+        })
       }
 
       if (subscription.messagesUsed >= subscription.messagesLimit) {
-        console.log('❌ Message limit exceeded:', subscription.messagesUsed, '>=', subscription.messagesLimit)
-        return NextResponse.json(
-          { response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
-        )
+        return NextResponse.json({
+          response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.'
+        })
       }
     }
 
-    console.log('🔍 Finding/creating conversation...')
-    // 3. Find or create conversation
+    // 6. Handle conversation
+    console.log('💬 Managing conversation...')
     let conversationId = null
     
-    const { data: existingConversation, error: convFindError } = await supabaseAdmin
+    // Try to find existing conversation
+    const { data: existingConv } = await supabaseAdmin
       .from('Conversation')
       .select('id')
       .eq('merchantId', merchant.id)
       .eq('sessionId', sessionId)
-      .single()
+      .maybeSingle()
 
-    if (convFindError && convFindError.code !== 'PGRST116') {
-      console.error('❌ Error finding conversation:', convFindError)
-      return NextResponse.json(
-        { error: 'Database error while finding conversation' },
-        { status: 500 }
-      )
-    }
-
-    if (existingConversation) {
-      conversationId = existingConversation.id
-      console.log('✅ Found existing conversation:', conversationId)
+    if (existingConv) {
+      conversationId = existingConv.id
+      console.log('✅ Found existing conversation')
     } else {
-      console.log('🆕 Creating new conversation...')
-      const { data: newConversation, error: convError } = await supabaseAdmin
+      // Create new conversation
+      const { data: newConv, error: convError } = await supabaseAdmin
         .from('Conversation')
         .insert({
           merchantId: merchant.id,
@@ -137,18 +106,15 @@ export async function POST(
 
       if (convError) {
         console.error('❌ Error creating conversation:', convError)
-        return NextResponse.json(
-          { error: 'Failed to create conversation' },
-          { status: 500 }
-        )
+        throw new Error('Failed to create conversation')
       }
-      conversationId = newConversation.id
-      console.log('✅ Created new conversation:', conversationId)
+      
+      conversationId = newConv.id
+      console.log('✅ Created new conversation')
     }
 
-    console.log('💾 Storing user message...')
-    // 4. Store user message
-    const { error: userMessageError } = await supabaseAdmin
+    // 7. Store user message
+    await supabaseAdmin
       .from('Message')
       .insert({
         conversationId,
@@ -156,84 +122,18 @@ export async function POST(
         content: message
       })
 
-    if (userMessageError) {
-      console.error('⚠️ Error storing user message:', userMessageError)
-    } else {
-      console.log('✅ User message stored')
-    }
-
-    console.log('📜 Getting conversation history...')
-    // 5. Get conversation history
-    const { data: messageHistory, error: historyError } = await supabaseAdmin
-      .from('Message')
-      .select('role, content, createdAt')
-      .eq('conversationId', conversationId)
-      .order('createdAt', { ascending: true })
-      .limit(20)
-
-    if (historyError) {
-      console.error('⚠️ Error getting message history:', historyError)
-    }
-
-    const conversationHistoryFromDB = messageHistory || []
-    console.log('📝 Got', conversationHistoryFromDB.length, 'messages from history')
-
-    // 6. Prepare simplified context for AI (to avoid complexity issues)
-    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بشكل مفصل ومفيد.
-
-معلومات المتجر:
-${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) => 
-  `- ${ds.type}: ${ds.title}`
-).join('\n') || 'متجر للمنتجات والخدمات'}
-
-كن مهذباً ومساعداً وركز على خدمات المتجر.`
-
-    // 7. Generate AI response using enhanced streaming
+    // 8. Generate AI response
+    console.log('🤖 Generating AI response...')
+    
     if (stream) {
-      console.log('🌊 Starting enhanced streaming response...')
-      // For streaming, we return the stream directly
-      try {
-        const streamResponse = await generateEnhancedAIStreamResponse(message, businessContext, conversationHistoryFromDB, merchant, conversationId)
-        
-        // Update message usage count before streaming
-        if (subscription) {
-          console.log('📊 Updating message usage count...')
-          const { error: updateError } = await supabaseAdmin
-            .from('Subscription')
-            .update({ 
-              messagesUsed: subscription.messagesUsed + 1 
-            })
-            .eq('merchantId', merchant.id)
-
-          if (updateError) {
-            console.error('⚠️ Error updating message count:', updateError)
-          }
-        }
-
-        return streamResponse
-        
-      } catch (aiError) {
-        console.error('❌ AI streaming error:', aiError)
-        return NextResponse.json({
-          error: 'AI service unavailable',
-          response: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
-        }, { status: 500 })
-      }
+      // Return streaming response
+      return await generateStreamingResponse(message, merchant, conversationId)
     } else {
-      console.log('📝 Generating non-streaming response...')
-      // Non-streaming response (fallback)
-      let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
+      // Return regular response
+      const aiResponse = await generateRegularResponse(message, merchant)
       
-      try {
-        aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
-        
-      } catch (aiError) {
-        console.error('❌ AI response error:', aiError)
-        aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
-      }
-
-      // 8. Store AI response (for non-streaming only)
-      const { error: aiMessageError } = await supabaseAdmin
+      // Store AI response
+      await supabaseAdmin
         .from('Message')
         .insert({
           conversationId,
@@ -241,151 +141,57 @@ ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) =>
           content: aiResponse
         })
 
-      if (aiMessageError) {
-        console.error('⚠️ Error storing AI message:', aiMessageError)
-      }
-
-      // 9. Update message usage count
+      // Update message count
       if (subscription) {
-        const { error: updateError } = await supabaseAdmin
+        await supabaseAdmin
           .from('Subscription')
-          .update({ 
-            messagesUsed: subscription.messagesUsed + 1 
-          })
+          .update({ messagesUsed: subscription.messagesUsed + 1 })
           .eq('merchantId', merchant.id)
-
-        if (updateError) {
-          console.error('⚠️ Error updating message count:', updateError)
-        }
       }
 
       return NextResponse.json({ response: aiResponse })
     }
 
   } catch (error) {
-    console.error('💥 CRITICAL ERROR in chat endpoint:', error)
-    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('💥 API Error:', error)
+    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack')
     
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
-// Calculate enhanced max tokens
-function calculateMaxTokens(userMessage: string, conversationHistory: any[], context: string): number {
-  const baseTokens = 5000
-  const messageLength = userMessage.length
-  const historyLength = conversationHistory.length
-  const contextLength = context.length
+// Helper function for streaming response
+async function generateStreamingResponse(message: string, merchant: any, conversationId: string): Promise<Response> {
+  console.log('🌊 Starting streaming response...')
   
-  let calculatedTokens = baseTokens
-  calculatedTokens += Math.min(messageLength * 3, 20000)
-  calculatedTokens += Math.min(historyLength * 300, 10000)
-  calculatedTokens += Math.min(contextLength / 5, 10000)
+  const apiKey = process.env.CHUTES_AI_API_KEY
   
-  // Enhanced limit: up to 128K tokens
-  return Math.min(calculatedTokens, 128000)
-}
-
-// Enhanced AI response generator (non-streaming)
-async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
-  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
-
-  if (!chuteAIApiKey) {
-    console.warn('CHUTES_AI_API_KEY not found, using fallback response')
-    return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
+  if (!apiKey) {
+    console.error('❌ CHUTES_AI_API_KEY not found')
+    throw new Error('AI service not configured')
   }
 
-  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
+  const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة.`
 
   try {
-    const response = await fetch(chuteAIUrl, {
+    const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${chuteAIApiKey}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'deepseek-ai/DeepSeek-V3-0324',
         messages: [
           {
             role: 'user',
-            content: `${context}\n\nالعميل: ${userMessage}`
+            content: `${context}\n\nالعميل: ${message}`
           }
         ],
-        max_tokens: maxTokens,
-        temperature: 0.7,
-        stream: false
-      })
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Chutes AI API error:', response.status, response.statusText, errorText)
-      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      let aiResponse = data.choices[0].message.content.trim()
-      
-      // Clean up the response
-      aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
-      
-      return aiResponse || 'شكراً لك على تواصلك معنا. كيف يمكنني مساعدتك؟'
-    } else {
-      console.error('Unexpected AI API response format:', data)
-      throw new Error('Invalid AI API response format')
-    }
-
-  } catch (error) {
-    console.error('Error calling Chutes AI API:', error)
-    throw error
-  }
-}
-
-// ENHANCED streaming response generator with 128K tokens support
-async function generateEnhancedAIStreamResponse(
-  userMessage: string, 
-  context: string, 
-  conversationHistory: any[],
-  merchant: any,
-  conversationId: string
-): Promise<Response> {
-  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
-
-  if (!chuteAIApiKey) {
-    throw new Error('CHUTES_AI_API_KEY not configured')
-  }
-
-  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
-
-  console.log('🚀 Enhanced streaming with:', { maxTokens, model: 'DeepSeek-V3-0324' })
-
-  try {
-    const response = await fetch(chuteAIUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${chuteAIApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
-        messages: [
-          {
-            role: 'user',
-            content: `${context}\n\nالعميل: ${userMessage}`
-          }
-        ],
-        max_tokens: maxTokens,
+        max_tokens: 4000,
         temperature: 0.7,
         stream: true
       })
@@ -393,16 +199,16 @@ async function generateEnhancedAIStreamResponse(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Chutes AI streaming API error:', response.status, response.statusText, errorText)
-      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
+      console.error('❌ AI API error:', response.status, errorText)
+      throw new Error(`AI API error: ${response.status}`)
     }
 
-    // Create enhanced streaming response
+    // Create streaming response
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader()
         const decoder = new TextDecoder()
-        let accumulatedResponse = ''
+        let accumulatedContent = ''
 
         if (!reader) {
           controller.error(new Error('No response body'))
@@ -414,20 +220,23 @@ async function generateEnhancedAIStreamResponse(
             const { done, value } = await reader.read()
             
             if (done) {
-              console.log('✅ Stream completed, saving to database...')
-              
-              // Store the complete response in database
-              if (accumulatedResponse.trim()) {
+              // Save complete response to database
+              if (accumulatedContent.trim()) {
                 await supabaseAdmin
                   .from('Message')
                   .insert({
                     conversationId,
                     role: 'ASSISTANT',
-                    content: accumulatedResponse.trim()
+                    content: accumulatedContent.trim()
                   })
+                
+                // Update message count
+                await supabaseAdmin
+                  .from('Subscription')
+                  .update({ messagesUsed: merchant.subscription?.messagesUsed + 1 || 1 })
+                  .eq('merchantId', merchant.id)
               }
               
-              // Send completion signal
               controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
               controller.close()
               break
@@ -440,39 +249,30 @@ async function generateEnhancedAIStreamResponse(
               if (line.startsWith('data: ')) {
                 const data = line.slice(6).trim()
                 
-                if (data === '[DONE]') {
-                  continue
-                }
-
+                if (data === '[DONE]') continue
+                
                 try {
                   const parsed = JSON.parse(data)
                   const content = parsed.choices?.[0]?.delta?.content || ''
                   
                   if (content) {
-                    accumulatedResponse += content
+                    accumulatedContent += content
                     
-                    // Clean up content for first few characters
-                    let cleanContent = content
-                    if (accumulatedResponse.length < 50) {
-                      cleanContent = content.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
-                    }
-                    
-                    // Send the chunk immediately to client
+                    // Send chunk to client
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-                      content: cleanContent,
-                      delta: cleanContent
+                      content: content,
+                      delta: content
                     })}\n\n`))
                   }
                 } catch (parseError) {
-                  console.error('Error parsing streaming chunk:', parseError)
+                  console.error('Parse error:', parseError)
                 }
               }
             }
           }
-
-        } catch (error) {
-          console.error('Streaming error:', error)
-          controller.error(error)
+        } catch (streamError) {
+          console.error('Stream error:', streamError)
+          controller.error(streamError)
         }
       }
     })
@@ -484,13 +284,69 @@ async function generateEnhancedAIStreamResponse(
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'X-Accel-Buffering': 'no'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     })
 
   } catch (error) {
-    console.error('Error calling enhanced Chutes AI streaming API:', error)
+    console.error('❌ Streaming error:', error)
     throw error
+  }
+}
+
+// Helper function for regular response
+async function generateRegularResponse(message: string, merchant: any): Promise<string> {
+  console.log('📝 Generating regular response...')
+  
+  const apiKey = process.env.CHUTES_AI_API_KEY
+  
+  if (!apiKey) {
+    console.warn('❌ CHUTES_AI_API_KEY not found')
+    return `شكراً لاهتمامك بـ ${merchant.businessName}. يرجى التواصل معنا للحصول على مساعدة أفضل.`
+  }
+
+  const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة.`
+
+  try {
+    const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${context}\n\nالعميل: ${message}`
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.7,
+        stream: false
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ AI API error:', response.status, errorText)
+      throw new Error(`AI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    
+    if (data.choices?.[0]?.message?.content) {
+      let aiResponse = data.choices[0].message.content.trim()
+      // Clean up response
+      aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
+      return aiResponse || 'شكراً لك على تواصلك معنا. كيف يمكنني مساعدتك؟'
+    } else {
+      throw new Error('Invalid AI response format')
+    }
+
+  } catch (error) {
+    console.error('❌ AI generation error:', error)
+    return `شكراً لاهتمامك بـ ${merchant.businessName}. يرجى التواصل معنا للحصول على مساعدة أفضل.`
   }
 } 
