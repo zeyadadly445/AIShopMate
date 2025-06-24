@@ -150,8 +150,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     try {
       console.log('🌊 Starting streaming chat with conversation history...')
 
-      // Prepare conversation history for AI context (last 20 messages excluding current user message)
-      const conversationHistory = updatedMessages.slice(-21, -1).map(msg => ({
+      // Prepare conversation history for AI context (last 25 messages excluding current user message)
+      const conversationHistory = updatedMessages.slice(-26, -1).map(msg => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp.toISOString()

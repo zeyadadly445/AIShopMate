@@ -82,8 +82,8 @@ export async function POST(
     console.log('🤖 Preparing AI context with local conversation history...')
     const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة وقدم ردود مفصلة ومساعدة.`
     
-    // Use conversation history sent from frontend (last 20 messages)
-    const recentHistory = conversationHistory?.slice(-20) || []
+    // Use conversation history sent from frontend (last 25 messages)
+    const recentHistory = conversationHistory?.slice(-25) || []
     console.log(`📜 Using ${recentHistory.length} messages from local history`)
 
     // 7. Generate AI response
