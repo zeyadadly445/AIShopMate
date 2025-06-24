@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
             content: `${testPrompt}\n\nCustomer: ${testMessage}`
           }
         ],
-        max_tokens: 150,
+        max_tokens: 60000,
         temperature: 0.7,
-        stream: false
+        stream: true
       })
     })
 
