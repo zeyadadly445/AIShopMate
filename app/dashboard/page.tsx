@@ -80,8 +80,8 @@ export default function DashboardPage() {
     // Load initial stats
     fetchStats().finally(() => setLoading(false))
     
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000)
+    // Auto-refresh every 20 seconds
+    const interval = setInterval(fetchStats, 20000)
     
     return () => clearInterval(interval)
   }, [router])
@@ -159,13 +159,15 @@ export default function DashboardPage() {
               <p className="text-gray-900">مرحباً بك، {stats.merchant.businessName}</p>
             </div>
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
-              <button
-                onClick={fetchStats}
-                disabled={refreshing}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {refreshing ? '⟳ جاري التحديث...' : '🔄 تحديث'}
-              </button>
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                {refreshing && (
+                  <div className="flex items-center space-x-1 rtl:space-x-reverse text-blue-600">
+                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm">جاري التحديث...</span>
+                  </div>
+                )}
+                <span className="text-xs text-gray-500">تحديث تلقائي كل 20 ثانية</span>
+              </div>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
