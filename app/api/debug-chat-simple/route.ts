@@ -105,28 +105,48 @@ export async function POST(request: NextRequest) {
     if (merchant) {
       try {
         // Try to create a test conversation
+        const testSessionId = `debug-${Date.now()}`
         const { data: conversation, error: convError } = await supabaseAdmin
           .from('Conversation')
           .insert({
             merchantId: merchant.id,
-            sessionId: `debug-${Date.now()}`
+            sessionId: testSessionId
           })
           .select('id')
           .single()
 
         if (convError) {
-          debugInfo.errors.push(`❌ Conversation creation failed: ${convError.message}`)
-        } else {
+          debugInfo.errors.push(`❌ Conversation creation failed: ${convError.message} (Code: ${convError.code}, Details: ${convError.details})`)
+        } else if (conversation) {
           debugInfo.success.push('✅ Conversation creation works')
           
-          // Clean up - delete the test conversation
+          // Test message creation too
+          const { data: message, error: msgError } = await supabaseAdmin
+            .from('Message')
+            .insert({
+              conversationId: conversation.id,
+              role: 'USER',
+              content: 'Test message'
+            })
+            .select('id')
+            .single()
+
+          if (msgError) {
+            debugInfo.errors.push(`❌ Message creation failed: ${msgError.message}`)
+          } else {
+            debugInfo.success.push('✅ Message creation works')
+          }
+          
+          // Clean up - delete the test conversation (cascades to messages)
           await supabaseAdmin
             .from('Conversation')
             .delete()
             .eq('id', conversation.id)
+        } else {
+          debugInfo.errors.push('❌ Conversation creation returned null')
         }
       } catch (error) {
-        debugInfo.errors.push(`❌ Conversation test error: ${error}`)
+        debugInfo.errors.push(`❌ Conversation test error: ${error instanceof Error ? error.message : error}`)
       }
     }
 
