@@ -83,14 +83,19 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
 
     // 3. Generate AI response
     let aiResponse = `مرحباً! أنا مساعد ${merchant.businessName}. شكراً لرسالتك. كيف يمكنني مساعدتك اليوم؟`
+    let aiDebug: any = { success: false, error: 'not attempted', stage: 'init' }
 
     try {
       const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
       const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
 
       if (!chuteAIApiKey) {
+        aiDebug = { success: false, error: 'API key not found', stage: 'env_check' }
         console.log('⚠️ AI API key not found, using fallback')
-        return NextResponse.json({ response: aiResponse })
+        return NextResponse.json({ 
+          response: aiResponse,
+          debug: { aiDebug, merchant: merchant.businessName }
+        })
       }
 
       // Calculate dynamic max tokens based on context
@@ -105,7 +110,21 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
       maxTokens += Math.min(contextLength / 10, 2000)
       maxTokens = Math.min(maxTokens, 8000) // Reasonable limit for faster responses
 
-      console.log('🤖 Calling AI API...', { maxTokens, historyLength })
+      console.log('🤖 Calling AI API...', { maxTokens, historyLength, messageLength: message.length })
+      aiDebug.stage = 'calling_api'
+
+      const requestBody = {
+        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${businessContext}\n\nرسالة العميل الجديدة: ${message}`
+          }
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.7,
+        stream: false
+      }
 
       const response = await fetch(chuteAIUrl, {
         method: 'POST',
@@ -113,35 +132,74 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${chuteAIApiKey}`
         },
-        body: JSON.stringify({
-          model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
-          messages: [
-            {
-              role: 'user',
-              content: `${businessContext}\n\nرسالة العميل الجديدة: ${message}`
-            }
-          ],
-          max_tokens: maxTokens,
-          temperature: 0.7,
-          stream: false
-        })
+        body: JSON.stringify(requestBody)
       })
 
+      aiDebug.stage = 'response_received'
+      
       if (response.ok) {
         const data = await response.json()
+        aiDebug.stage = 'parsing_response'
+        
+        console.log('📝 AI API Response structure:', {
+          hasChoices: !!data.choices,
+          choicesLength: data.choices?.length,
+          hasContent: !!data.choices?.[0]?.message?.content,
+          contentLength: data.choices?.[0]?.message?.content?.length
+        })
+        
         if (data.choices?.[0]?.message?.content) {
-          aiResponse = data.choices[0].message.content.trim()
+          const rawResponse = data.choices[0].message.content.trim()
           
           // Clean up common prefixes
-          aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
+          aiResponse = rawResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
           
-          console.log('✅ AI response generated successfully')
+          // If cleaning removed everything, use original
+          if (!aiResponse.trim()) {
+            aiResponse = rawResponse
+          }
+          
+          aiDebug = { 
+            success: true, 
+            error: null, 
+            stage: 'success',
+            rawLength: rawResponse.length,
+            cleanedLength: aiResponse.length,
+            wasCleaned: rawResponse !== aiResponse
+          }
+          
+          console.log('✅ AI response generated successfully', {
+            originalLength: rawResponse.length,
+            finalLength: aiResponse.length
+          })
+        } else {
+          aiDebug = { 
+            success: false, 
+            error: 'No content in AI response', 
+            stage: 'no_content',
+            responseStructure: Object.keys(data)
+          }
+          console.log('❌ AI response has no content:', data)
         }
       } else {
-        console.log('⚠️ AI API failed:', response.status, await response.text())
+        const errorText = await response.text()
+        aiDebug = { 
+          success: false, 
+          error: `HTTP ${response.status}: ${errorText}`, 
+          stage: 'http_error',
+          status: response.status,
+          statusText: response.statusText
+        }
+        console.log('⚠️ AI API failed:', response.status, response.statusText, errorText)
       }
 
     } catch (aiError) {
+      aiDebug = { 
+        success: false, 
+        error: aiError instanceof Error ? aiError.message : String(aiError), 
+        stage: 'exception',
+        errorType: aiError instanceof Error ? aiError.constructor.name : typeof aiError
+      }
       console.log('⚠️ AI error, using fallback:', aiError)
     }
 
@@ -153,7 +211,13 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
         primaryColor: merchant.primaryColor
       },
       timestamp: new Date().toISOString(),
-      status: 'success_local_only'
+      status: 'success_local_only',
+      debug: {
+        ai: aiDebug,
+        contextLength: businessContext.length,
+        historyLength: conversationHistory.length,
+        messageLength: message.length
+      }
     })
 
   } catch (error) {

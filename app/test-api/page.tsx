@@ -50,7 +50,7 @@ export default function TestAPIPage() {
       method: 'GET'
     },
     {
-      name: '💬 دردشة محلية (مع السياق)',
+      name: '🔍 اختبار AI Debug',
       endpoint: '/api/chat-local/shoes',
       data: { 
         message: 'مرحبا، أريد شراء أحذية رياضية', 
@@ -59,6 +59,14 @@ export default function TestAPIPage() {
           { role: 'user', content: 'ما هي الأحذية المتوفرة؟', timestamp: new Date().toISOString() },
           { role: 'assistant', content: 'لدينا مجموعة رائعة من الأحذية الرياضية والكاجوال', timestamp: new Date().toISOString() }
         ]
+      }
+    },
+    {
+      name: '🔧 اختبار AI بسيط',
+      endpoint: '/api/chat-local/shoes',
+      data: { 
+        message: 'هلا',
+        conversationHistory: []
       }
     },
     {
