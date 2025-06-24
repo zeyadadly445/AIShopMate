@@ -11,6 +11,13 @@ const ADMIN_CREDENTIALS = {
   adminId: process.env.ADMIN_ID || 'admin_master_2024'
 }
 
+// Debug logging للتشخيص (سيتم إزالته لاحقاً)
+console.log('🔍 Admin Credentials Debug:')
+console.log('Username:', ADMIN_CREDENTIALS.username)
+console.log('Password exists:', !!ADMIN_CREDENTIALS.password)
+console.log('Hash exists:', !!ADMIN_CREDENTIALS.passwordHash)
+console.log('Admin ID:', ADMIN_CREDENTIALS.adminId)
+
 const JWT_SECRET = process.env.JWT_SECRET || '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g4h'
 
 export interface AdminSession {
@@ -27,17 +34,32 @@ export class AdminAuthService {
    */
   static async validateAdmin(username: string, password: string): Promise<boolean> {
     try {
+      console.log('🔍 Validating admin login:')
+      console.log('Input username:', username)
+      console.log('Expected username:', ADMIN_CREDENTIALS.username)
+      console.log('Username match:', username === ADMIN_CREDENTIALS.username)
+      
       if (username !== ADMIN_CREDENTIALS.username) {
+        console.log('❌ Username mismatch')
         return false
       }
       
       // إذا كان هناك hash مشفر، استخدمه (للأمان المتقدم)
       if (ADMIN_CREDENTIALS.passwordHash) {
-        return await bcrypt.compare(password, ADMIN_CREDENTIALS.passwordHash)
+        console.log('🔐 Using hashed password validation')
+        const result = await bcrypt.compare(password, ADMIN_CREDENTIALS.passwordHash)
+        console.log('Hash validation result:', result)
+        return result
       }
       
       // وإلا، مقارنة مباشرة مع كلمة المرور (للسهولة)
-      return password === ADMIN_CREDENTIALS.password
+      console.log('🔓 Using plain text password validation')
+      console.log('Expected password:', ADMIN_CREDENTIALS.password)
+      console.log('Input password length:', password.length)
+      console.log('Expected password length:', ADMIN_CREDENTIALS.password.length)
+      const result = password === ADMIN_CREDENTIALS.password
+      console.log('Password match result:', result)
+      return result
     } catch (error) {
       console.error('Error validating admin:', error)
       return false
