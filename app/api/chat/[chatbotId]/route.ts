@@ -109,7 +109,17 @@ export async function POST(
       console.error('Error storing user message:', userMessageError)
     }
 
-    // 5. Prepare context for AI
+    // 5. Get conversation history
+    const { data: messageHistory, error: historyError } = await supabaseAdmin
+      .from('Message')
+      .select('role, content, createdAt')
+      .eq('conversationId', conversationId)
+      .order('createdAt', { ascending: true })
+      .limit(20) // Get last 20 messages
+
+    const conversationHistoryFromDB = messageHistory || []
+
+    // 6. Prepare context for AI
     const businessContext = `
 أنت مساعد ذكي لمتجر "${merchant.businessName}".
 
@@ -127,25 +137,23 @@ ${merchant.dataSources?.filter(ds => ds.isActive).map(ds =>
 6. احتفظ بالطابع المهني والودود
 
 محادثة سابقة:
-${conversationHistory.slice(-10).map((msg: any) => 
-  `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
+${conversationHistoryFromDB.slice(-10).map((msg: any) => 
+  `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
 ).join('\n')}
 `
 
-    // 6. Generate AI response
+    // 7. Generate AI response using Chutes AI
     let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
     
     try {
-      // For now, we'll create a simple rule-based response
-      // You can replace this with actual AI API call (Chutes AI or OpenAI)
-      aiResponse = await generateAIResponse(message, businessContext, merchant.businessName)
+      aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
       
     } catch (aiError) {
       console.error('AI response error:', aiError)
       aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
     }
 
-    // 7. Store AI response
+    // 8. Store AI response
     const { error: aiMessageError } = await supabaseAdmin
       .from('Message')
       .insert({
@@ -158,7 +166,7 @@ ${conversationHistory.slice(-10).map((msg: any) =>
       console.error('Error storing AI message:', aiMessageError)
     }
 
-    // 8. Update message usage count
+    // 9. Update message usage count
     if (subscription) {
       const { error: updateError } = await supabaseAdmin
         .from('Subscription')
@@ -183,31 +191,71 @@ ${conversationHistory.slice(-10).map((msg: any) =>
   }
 }
 
-// Simple AI response generator (replace with actual AI service)
-async function generateAIResponse(userMessage: string, context: string, businessName: string): Promise<string> {
-  const lowerMessage = userMessage.toLowerCase()
-  
-  // Simple keyword-based responses
-  if (lowerMessage.includes('مرحبا') || lowerMessage.includes('السلام') || lowerMessage.includes('أهلا')) {
-    return `أهلاً وسهلاً بك في ${businessName}! كيف يمكنني مساعدتك اليوم؟`
+// AI response generator using Chutes AI API
+async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
+  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
+  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://api.chutes.ai/v1/chat/completions'
+
+  if (!chuteAIApiKey) {
+    console.warn('CHUTES_AI_API_KEY not found, using fallback response')
+    return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
   }
-  
-  if (lowerMessage.includes('منتج') || lowerMessage.includes('سعر') || lowerMessage.includes('شراء')) {
-    return `يسعدني مساعدتك في التعرف على منتجاتنا في ${businessName}. يمكنك تصفح معلومات المنتجات والأسعار، أو التواصل معنا مباشرة للحصول على تفاصيل أكثر.`
+
+  // Prepare messages for AI API
+  const messages = [
+    {
+      role: 'system',
+      content: context
+    }
+  ]
+
+  // Add conversation history (last 10 messages)
+  const recentHistory = conversationHistory.slice(-10)
+  for (const msg of recentHistory) {
+    messages.push({
+      role: msg.role === 'USER' ? 'user' : 'assistant',
+      content: msg.content
+    })
   }
-  
-  if (lowerMessage.includes('تواصل') || lowerMessage.includes('هاتف') || lowerMessage.includes('اتصال')) {
-    return `للتواصل معنا في ${businessName}، يمكنك استخدام معلومات الاتصال الموجودة في الموقع أو ترك رسالة وسنعاود الاتصال بك قريباً.`
+
+  // Add current user message
+  messages.push({
+    role: 'user',
+    content: userMessage
+  })
+
+  try {
+    const response = await fetch(chuteAIUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${chuteAIApiKey}`
+      },
+      body: JSON.stringify({
+        model: process.env.CHUTES_AI_MODEL || 'gpt-3.5-turbo',
+        messages: messages,
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: false
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Chutes AI API error:', response.status, response.statusText)
+      throw new Error(`AI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content.trim()
+    } else {
+      console.error('Unexpected AI API response format:', data)
+      throw new Error('Invalid AI API response format')
+    }
+
+  } catch (error) {
+    console.error('Error calling Chutes AI API:', error)
+    throw error
   }
-  
-  if (lowerMessage.includes('ساعات') || lowerMessage.includes('مواعيد') || lowerMessage.includes('وقت')) {
-    return `بخصوص مواعيد العمل في ${businessName}، يرجى التواصل معنا مباشرة للحصول على معلومات دقيقة حول ساعات العمل.`
-  }
-  
-  if (lowerMessage.includes('توصيل') || lowerMessage.includes('شحن') || lowerMessage.includes('خدمة')) {
-    return `نحن في ${businessName} نسعى لتقديم أفضل خدمة لعملائنا. للاستفسار عن خدمات التوصيل والشحن، يرجى التواصل معنا للحصول على تفاصيل أكثر.`
-  }
-  
-  // Default response
-  return `شكراً لك على تواصلك مع ${businessName}. للحصول على إجابة مفصلة على استفسارك، يرجى التواصل مع فريق خدمة العملاء مباشرة.`
 } 

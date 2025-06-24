@@ -8,11 +8,14 @@ export async function GET(request: NextRequest) {
       environmentVars: {
         hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        hasSupabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasJwtSecret: !!process.env.JWT_SECRET,
-        databaseUrlPreview: process.env.DATABASE_URL ? 
-          process.env.DATABASE_URL.substring(0, 50) + '...' : 'NOT SET'
+              hasSupabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasChuteAIApiKey: !!process.env.CHUTES_AI_API_KEY,
+      chuteAIModel: process.env.CHUTES_AI_MODEL || 'not set',
+      chuteAIUrl: process.env.CHUTES_AI_API_URL || 'default: https://api.chutes.ai/v1/chat/completions',
+      databaseUrlPreview: process.env.DATABASE_URL ? 
+        process.env.DATABASE_URL.substring(0, 50) + '...' : 'NOT SET'
       }
     }
 
