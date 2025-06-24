@@ -63,17 +63,19 @@ export async function GET(request: NextRequest) {
 
     // 3. حساب الإحصائيات العامة
     const totalMerchants = merchants?.length || 0
-    const activeMerchants = merchants?.filter(m => 
-      Array.isArray(m.subscription) 
-        ? m.subscription[0]?.status === 'ACTIVE'
-        : m.subscription?.status === 'ACTIVE'
-    ).length || 0
+    const activeMerchants = merchants?.filter(m => {
+      const subscription = Array.isArray(m.subscription) 
+        ? m.subscription[0] 
+        : m.subscription
+      return subscription && subscription.status === 'ACTIVE'
+    }).length || 0
     
-    const trialMerchants = merchants?.filter(m => 
-      Array.isArray(m.subscription)
-        ? m.subscription[0]?.status === 'TRIAL'
-        : m.subscription?.status === 'TRIAL'
-    ).length || 0
+    const trialMerchants = merchants?.filter(m => {
+      const subscription = Array.isArray(m.subscription)
+        ? m.subscription[0] 
+        : m.subscription
+      return subscription && subscription.status === 'TRIAL'
+    }).length || 0
 
     // 4. حساب إجمالي الرسائل المستخدمة
     const totalMessagesUsed = merchants?.reduce((sum, merchant) => {

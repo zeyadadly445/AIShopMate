@@ -76,9 +76,12 @@ export async function GET(
       dataSources: dataSources || [],
       stats: {
         totalConversations: conversations?.length || 0,
-        totalMessages: conversations?.reduce((sum, conv) => 
-          sum + (Array.isArray(conv.messages) ? conv.messages.length : conv.messages?.count || 0), 0
-        ) || 0,
+        totalMessages: conversations?.reduce((sum, conv) => {
+          const messageCount = Array.isArray(conv.messages) 
+            ? conv.messages.length 
+            : (conv.messages as any)?.count || 0
+          return sum + messageCount
+        }, 0) || 0,
         totalDataSources: dataSources?.length || 0,
         activeDataSources: dataSources?.filter(ds => ds.isActive).length || 0
       }

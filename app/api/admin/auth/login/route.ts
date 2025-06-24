@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
     
     if (!isValidAdmin) {
       // تسجيل محاولة دخول غير صالحة (للأمان)
-      console.warn(`🚨 محاولة دخول غير صالحة للوحة الإدارة من IP: ${request.ip || 'unknown'}`)
+      const forwardedFor = request.headers.get('x-forwarded-for')
+      const ip = forwardedFor ? forwardedFor.split(',')[0] : 'unknown'
+      console.warn(`🚨 محاولة دخول غير صالحة للوحة الإدارة من IP: ${ip}`)
       
       return NextResponse.json({
         error: 'بيانات الدخول غير صحيحة'
