@@ -522,7 +522,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="اكتب رسالتك هنا..."
-                className="resize-none border-0 focus:ring-0 text-base"
+                className="resize-none border-0 focus:ring-0 text-base text-gray-900"
                 disabled={isLoading}
                 dir="rtl"
               />
