@@ -72,10 +72,10 @@ export async function POST(
         })
       }
 
-      console.log('🚀 Sending request exactly like working frontend...')
+      console.log('🚀 Sending enhanced streaming request with 128K tokens...')
       aiDebug.stage = 'calling_api'
 
-      // USE EXACT SAME APPROACH AS WORKING FRONTEND CODE
+      // ENHANCED WITH STREAMING AND HIGH TOKEN LIMIT
       const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -87,11 +87,11 @@ export async function POST(
           messages: [
             {
               role: 'user',
-              content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية على: ${message}`
+              content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية بشكل مفصل ومفيد على: ${message}`
             }
           ],
-          stream: false,
-          max_tokens: 2048,
+          stream: true,
+          max_tokens: 128000,
           temperature: 0.7
         })
       })
@@ -99,30 +99,87 @@ export async function POST(
       console.log(`📦 Status: ${response.status}`)
       
       if (response.ok) {
-        const data = await response.json()
-        console.log('✅ Response received successfully')
+        console.log('✅ Starting streaming response processing...')
         
-        const aiContent = data.choices?.[0]?.message?.content?.trim()
-        
-        if (aiContent) {
-          aiResponse = aiContent
-          aiDebug = { 
-            success: true, 
-            error: null, 
-            stage: 'success',
-            contentLength: aiContent.length 
+        // Handle streaming response
+        if (response.body) {
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+          let fullResponse = ''
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              
+              if (done) {
+                console.log('✅ Streaming completed')
+                break
+              }
+              
+              const chunk = decoder.decode(value, { stream: true })
+              const lines = chunk.split('\n')
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6).trim()
+                  
+                  if (data === '[DONE]') {
+                    console.log('✅ Stream finished with [DONE]')
+                    break
+                  }
+                  
+                  try {
+                    const parsed = JSON.parse(data)
+                    const content = parsed.choices?.[0]?.delta?.content
+                    
+                    if (content) {
+                      fullResponse += content
+                    }
+                  } catch (parseError) {
+                    // Skip invalid JSON chunks
+                    console.log('⚠️ Skipping invalid JSON chunk')
+                  }
+                }
+              }
+            }
+            
+            if (fullResponse.trim()) {
+              aiResponse = fullResponse.trim()
+              aiDebug = { 
+                success: true, 
+                error: null, 
+                stage: 'streaming_success',
+                contentLength: aiResponse.length,
+                streaming: true,
+                maxTokens: 128000
+              }
+              console.log('✅ Streaming AI success!', { 
+                responseLength: aiResponse.length,
+                streaming: true 
+              })
+            } else {
+              aiDebug = { 
+                success: false, 
+                error: 'No content in streaming response', 
+                stage: 'no_streaming_content'
+              }
+              console.log('❌ No content in streaming response')
+            }
+          } catch (streamError) {
+            aiDebug = { 
+              success: false, 
+              error: `Streaming error: ${streamError instanceof Error ? streamError.message : String(streamError)}`, 
+              stage: 'streaming_error'
+            }
+            console.log('❌ Streaming processing error:', streamError)
           }
-          console.log('✅ AI success with exact frontend approach!', { 
-            responseLength: aiContent.length 
-          })
         } else {
           aiDebug = { 
             success: false, 
-            error: 'No content in response', 
-            stage: 'no_content',
-            responseData: data
+            error: 'No response body for streaming', 
+            stage: 'no_stream_body'
           }
-          console.log('❌ No content in response:', data)
+          console.log('❌ No response body available for streaming')
         }
       } else {
         const errorData = await response.json()
@@ -142,7 +199,7 @@ export async function POST(
         stage: 'exception',
         errorType: aiError instanceof Error ? aiError.constructor.name : typeof aiError
       }
-      console.log('❌ Frontend-style AI failed:', aiError)
+      console.log('❌ AI request failed:', aiError)
     }
 
     // 4. Return response (no database saving)
@@ -153,12 +210,14 @@ export async function POST(
         primaryColor: merchant.primaryColor
       },
       timestamp: new Date().toISOString(),
-      status: aiDebug.success ? 'success_ai' : 'success_fallback',
+      status: aiDebug.success ? 'success_ai_streaming' : 'success_fallback',
       debug: {
         ai: aiDebug,
         historyLength: conversationHistory.length,
         messageLength: message.length,
-        fallbackUsed: !aiDebug.success
+        fallbackUsed: !aiDebug.success,
+        streaming: aiDebug.success,
+        maxTokens: 128000
       }
     })
 
