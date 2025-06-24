@@ -13,3 +13,116 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Enums
+enum SubscriptionPlan {
+  BASIC
+  STANDARD
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum DataType {
+  PRODUCTS
+  PRICES
+  FAQ
+  SERVICES
+  OTHER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+// Models
+model Merchant {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  businessName   String
+  phone          String?
+  logoUrl        String?
+  chatbotId      String    @unique
+  welcomeMessage String    @default("مرحبا! كيف يمكنني مساعدتك")
+  primaryColor   String    @default("#007bff")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  subscription   Subscription?
+  dataSources    MerchantDataSource[]
+  conversations  Conversation[]
+
+  @@map("Merchant")
+}
+
+model Subscription {
+  id            String             @id @default(cuid())
+  merchantId    String             @unique
+  plan          SubscriptionPlan   @default(BASIC)
+  status        SubscriptionStatus @default(TRIAL)
+  messagesLimit Int                @default(1000)
+  messagesUsed  Int                @default(0)
+  startDate     DateTime           @default(now())
+  endDate       DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relations
+  merchant      Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@map("Subscription")
+}
+
+model MerchantDataSource {
+  id         String   @id @default(cuid())
+  merchantId String
+  type       DataType
+  title      String
+  url        String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("MerchantDataSource")
+}
+
+model Conversation {
+  id         String    @id @default(cuid())
+  merchantId String
+  sessionId  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  merchant   Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  messages   Message[]
+
+  @@index([merchantId, sessionId])
+  @@map("Conversation")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime    @default(now())
+
+  // Relations
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("Message")
+}

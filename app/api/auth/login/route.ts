@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { comparePassword, signToken } from '@/lib/auth'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { email, password } = await request.json()
+
+    // Validation
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني وكلمة المرور مطلوبان' },
+        { status: 400 }
+      )
+    }
+
+    // Find merchant
+    const merchant = await prisma.merchant.findUnique({
+      where: { email },
+      include: { subscription: true }
+    })
+
+    if (!merchant) {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' },
+        { status: 401 }
+      )
+    }
+
+    // Check password
+    const isValidPassword = await comparePassword(password, merchant.password)
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' },
+        { status: 401 }
+      )
+    }
+
+    // Generate token
+    const token = signToken({
+      merchantId: merchant.id,
+      email: merchant.email
+    })
+
+    return NextResponse.json({
+      token,
+      merchant: {
+        id: merchant.id,
+        email: merchant.email,
+        businessName: merchant.businessName,
+        chatbotId: merchant.chatbotId,
+        subscription: merchant.subscription
+      }
+    })
+
+  } catch (error) {
+    console.error('Login error:', error)
+    return NextResponse.json(
+      { error: 'حدث خطأ في الخادم' },
+      { status: 500 }
+    )
+  }
+} 
