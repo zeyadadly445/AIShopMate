@@ -117,7 +117,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">جاري التحميل...</p>
+          <p className="mt-4 text-gray-900">جاري التحميل...</p>
         </div>
       </div>
     )
@@ -156,7 +156,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">لوحة التحكم</h1>
-              <p className="text-gray-600">مرحباً بك، {stats.merchant.businessName}</p>
+              <p className="text-gray-900">مرحباً بك، {stats.merchant.businessName}</p>
             </div>
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
               <button
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-600 truncate">
+                    <dt className="text-sm font-medium text-gray-900 truncate">
                       الرسائل المستخدمة
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -235,8 +235,8 @@ export default function DashboardPage() {
               {/* Progress Bar */}
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{stats.subscription.usagePercentage}% مستخدم</span>
-                  <span className="text-gray-600">{stats.subscription.remainingMessages.toLocaleString()} متبقي</span>
+                  <span className="text-gray-900">{stats.subscription.usagePercentage}% مستخدم</span>
+                  <span className="text-gray-900">{stats.subscription.remainingMessages.toLocaleString()} متبقي</span>
                 </div>
                 <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
                   <div 
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-600 truncate">
+                    <dt className="text-sm font-medium text-gray-900 truncate">
                       خطة الاشتراك
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-600 truncate">
+                    <dt className="text-sm font-medium text-gray-900 truncate">
                       حالة النظام
                     </dt>
                     <dd className="mt-1">
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-600 truncate">
+                    <dt className="text-sm font-medium text-gray-900 truncate">
                       حالة الحساب
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -322,7 +322,7 @@ export default function DashboardPage() {
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">🤖 رابط الشات بوت الخاص بك</h2>
           <div className="bg-gray-100 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">استخدم هذا الرابط في بايو وسائل التواصل الاجتماعي:</p>
+            <p className="text-sm text-gray-900 mb-2">استخدم هذا الرابط في بايو وسائل التواصل الاجتماعي:</p>
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
               <input
                 type="text"
@@ -366,7 +366,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">1. إعداد مصادر البيانات</h3>
-              <p className="text-gray-600 text-sm mb-3">أضف روابط منتجاتك وأسعارك من Google Docs أو Sheets</p>
+              <p className="text-gray-900 text-sm mb-3">أضف روابط منتجاتك وأسعارك من Google Docs أو Sheets</p>
               <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
                 إضافة مصادر البيانات
               </button>
@@ -374,7 +374,7 @@ export default function DashboardPage() {
 
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">2. تخصيص الشات بوت</h3>
-              <p className="text-gray-600 text-sm mb-3">غير رسالة الترحيب والألوان حسب علامتك التجارية</p>
+              <p className="text-gray-900 text-sm mb-3">غير رسالة الترحيب والألوان حسب علامتك التجارية</p>
               <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
                 تخصيص الشات بوت
               </button>
@@ -382,7 +382,7 @@ export default function DashboardPage() {
 
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">3. اختبار الشات بوت</h3>
-              <p className="text-gray-600 text-sm mb-3">جرب الشات بوت للتأكد من عمله بالشكل المطلوب</p>
+              <p className="text-gray-900 text-sm mb-3">جرب الشات بوت للتأكد من عمله بالشكل المطلوب</p>
               <a
                 href={`${window.location.origin}/chat/${stats.merchant.chatbotId}`}
                 target="_blank"
@@ -400,7 +400,7 @@ export default function DashboardPage() {
 
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">4. مشاركة الرابط</h3>
-              <p className="text-gray-600 text-sm mb-3">ضع الرابط في بايو Instagram، TikTok، وبقية حساباتك</p>
+              <p className="text-gray-900 text-sm mb-3">ضع الرابط في بايو Instagram، TikTok، وبقية حساباتك</p>
               <button
                 onClick={() => navigator.clipboard.writeText(`${window.location.origin}/chat/${stats.merchant.chatbotId}`)}
                 className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 text-sm"
@@ -419,15 +419,15 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 mb-2">معلومات أساسية</h3>
               <dl className="space-y-2">
                 <div>
-                  <dt className="text-sm text-gray-600">البريد الإلكتروني:</dt>
+                  <dt className="text-sm text-gray-900">البريد الإلكتروني:</dt>
                   <dd className="text-sm font-medium text-gray-900">{stats.merchant.email}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-600">اسم المتجر:</dt>
+                  <dt className="text-sm text-gray-900">اسم المتجر:</dt>
                   <dd className="text-sm font-medium text-gray-900">{stats.merchant.businessName}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-600">معرف الشات بوت:</dt>
+                  <dt className="text-sm text-gray-900">معرف الشات بوت:</dt>
                   <dd className="text-sm font-medium text-gray-900">{stats.merchant.chatbotId}</dd>
                 </div>
               </dl>
@@ -437,21 +437,21 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 mb-2">تفاصيل الاشتراك</h3>
               <dl className="space-y-2">
                 <div>
-                  <dt className="text-sm text-gray-600">النوع:</dt>
+                  <dt className="text-sm text-gray-900">النوع:</dt>
                   <dd className="text-sm font-medium text-gray-900">{stats.subscription.plan}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-600">الحالة:</dt>
+                  <dt className="text-sm text-gray-900">الحالة:</dt>
                   <dd className="text-sm font-medium text-gray-900">
                     {stats.subscription.status === 'TRIAL' ? 'فترة تجريبية' : 'نشط'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-600">الحد الشهري:</dt>
+                  <dt className="text-sm text-gray-900">الحد الشهري:</dt>
                   <dd className="text-sm font-medium text-gray-900">{stats.subscription.messagesLimit.toLocaleString()} رسالة</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-600">آخر تحديث:</dt>
+                  <dt className="text-sm text-gray-900">آخر تحديث:</dt>
                   <dd className="text-sm font-medium text-gray-900">
                     {new Date(stats.subscription.updatedAt).toLocaleDateString('ar-SA')}
                   </dd>

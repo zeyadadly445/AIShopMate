@@ -34,9 +34,8 @@ export default function Home() {
             شات بوت ذكي
             <span className="text-blue-600 block">لمتجرك الإلكتروني</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-            احصل على رابط مخصص لمتجرك واتصل بعملائك عبر ذكاء اصطناعي متطور. 
-            دع الذكاء الاصطناعي يرد على استفسارات عملائك بناءً على بيانات متجرك.
+          <p className="text-xl text-gray-900 max-w-2xl mx-auto">
+            منصة شاملة لإدارة تفاعل العملاء تلقائياً مع متجرك
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/register">
@@ -57,7 +56,7 @@ export default function Home() {
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
             لماذا AI ShopMate؟
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-900 max-w-2xl mx-auto">
             منصة شاملة لإدارة تفاعل العملاء تلقائياً مع متجرك
           </p>
         </div>
@@ -70,7 +69,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-4">إعداد سريع</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-900">
               إعداد الشات بوت في دقائق معدودة. فقط أضف بيانات متجرك واحصل على رابط جاهز للاستخدام.
             </p>
           </Card>
@@ -82,7 +81,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-4">ذكاء اصطناعي متقدم</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-900">
               يتعلم من بيانات متجرك ويقدم إجابات دقيقة ومفيدة لعملائك على مدار الساعة.
             </p>
           </Card>
@@ -94,7 +93,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-4">تفاعل طبيعي</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-900">
               محادثات ذكية تحتفظ بالسياق وتقدم تجربة تفاعلية طبيعية لعملائك.
             </p>
           </Card>
@@ -108,7 +107,7 @@ export default function Home() {
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
               كيف يعمل؟
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-900 max-w-2xl mx-auto">
               ثلاث خطوات بسيطة لتشغيل شات بوت ذكي لمتجرك
             </p>
           </div>
@@ -119,7 +118,7 @@ export default function Home() {
                 1
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">أنشئ حسابك</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 سجل حساب جديد واختر اسم فريد لمتجرك للحصول على رابط مخصص.
               </p>
             </div>
@@ -129,7 +128,7 @@ export default function Home() {
                 2
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">أضف بيانات متجرك</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 ارفع روابط Google Docs أو Sheets التي تحتوي على معلومات منتجاتك وخدماتك.
               </p>
             </div>
@@ -139,7 +138,7 @@ export default function Home() {
                 3
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">شارك الرابط</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 ضع رابط الشات بوت في bio حساباتك على السوشيال ميديا وابدأ التفاعل مع العملاء.
               </p>
             </div>
@@ -153,7 +152,7 @@ export default function Home() {
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
             خطط الأسعار
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-900 max-w-2xl mx-auto">
             اختر الخطة المناسبة لحجم متجرك
           </p>
         </div>
@@ -162,7 +161,7 @@ export default function Home() {
           <Card variant="outlined" className="text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-2">الأساسية</h3>
             <div className="text-3xl font-bold text-blue-600 mb-4">مجاناً</div>
-            <p className="text-gray-600 mb-6">مثالية للبدء</p>
+            <p className="text-gray-900 mb-6">مثالية للبدء</p>
             <ul className="text-right space-y-3 mb-8">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
@@ -193,8 +192,8 @@ export default function Home() {
               الأكثر شعبية
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">المتقدمة</h3>
-            <div className="text-3xl font-bold text-blue-600 mb-4">$29<span className="text-lg text-gray-600">/شهر</span></div>
-            <p className="text-gray-600 mb-6">للمتاجر المتنامية</p>
+            <div className="text-3xl font-bold text-blue-600 mb-4">$29<span className="text-lg text-gray-900">/شهر</span></div>
+            <p className="text-gray-900 mb-6">للمتاجر المتنامية</p>
             <ul className="text-right space-y-3 mb-8">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
@@ -228,8 +227,8 @@ export default function Home() {
 
           <Card variant="outlined" className="text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-2">المؤسسية</h3>
-            <div className="text-3xl font-bold text-blue-600 mb-4">$99<span className="text-lg text-gray-600">/شهر</span></div>
-            <p className="text-gray-600 mb-6">للمتاجر الكبيرة</p>
+            <div className="text-3xl font-bold text-blue-600 mb-4">$99<span className="text-lg text-gray-900">/شهر</span></div>
+            <p className="text-gray-900 mb-6">للمتاجر الكبيرة</p>
             <ul className="text-right space-y-3 mb-8">
               <li className="flex items-center">
                 <svg className="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">

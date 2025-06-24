@@ -381,7 +381,7 @@ export default function ChatPage({ params }: ChatPageProps) {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل المحادثة...</p>
+          <p className="text-gray-900">جاري تحميل المحادثة...</p>
         </div>
       </div>
     )
@@ -393,7 +393,7 @@ export default function ChatPage({ params }: ChatPageProps) {
         <Card className="max-w-md mx-auto text-center p-8">
           <div className="text-red-500 text-6xl mb-4">❌</div>
           <h1 className="text-2xl font-bold text-gray-800 mb-4">المتجر غير موجود</h1>
-          <p className="text-gray-600">عذراً، لم نتمكن من العثور على هذا المتجر.</p>
+          <p className="text-gray-900">عذراً، لم نتمكن من العثور على هذا المتجر.</p>
         </Card>
       </div>
     )
@@ -429,7 +429,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             )}
             <div>
               <h1 className="text-xl font-bold text-gray-800">{merchant.businessName}</h1>
-              <p className="text-sm text-gray-600">مساعد ذكي • متاح الآن</p>
+              <p className="text-sm text-gray-900">مساعد ذكي • متاح الآن</p>
             </div>
             <div className="flex-1"></div>
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -437,7 +437,7 @@ export default function ChatPage({ params }: ChatPageProps) {
               <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
                 {isStreaming ? 'يكتب...' : 'متصل'}
               </span>
-              <span className="text-xs text-gray-600">• محفوظ محلياً</span>
+              <span className="text-xs text-gray-900">• محفوظ محلياً</span>
             </div>
           </div>
         </div>
@@ -465,7 +465,7 @@ export default function ChatPage({ params }: ChatPageProps) {
               >
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-xs mt-2 ${
-                  message.role === 'user' ? 'text-white/80' : 'text-gray-600'
+                  message.role === 'user' ? 'text-white/80' : 'text-gray-900'
                 }`}>
                   {message.timestamp.toLocaleTimeString('ar-SA', { 
                     hour: '2-digit', 
@@ -504,7 +504,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm text-gray-600">جاري التحضير...</span>
+                  <span className="text-sm text-gray-900">جاري التحضير...</span>
                 </div>
               </div>
             </div>
@@ -544,7 +544,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             </Button>
           </div>
           
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-900">
             <p>اضغط Enter للإرسال • Shift + Enter للسطر الجديد</p>
             <p className="flex items-center space-x-1 rtl:space-x-reverse">
               <span>مدعوم بـ</span>

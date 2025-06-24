@@ -116,7 +116,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-600">أو</span>
+                <span className="px-2 bg-white text-gray-900">أو</span>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
 
         {/* Back to Home */}
         <div className="text-center">
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-800">
+          <Link href="/" className="text-sm text-gray-900 hover:text-gray-700">
             ← العودة للصفحة الرئيسية
           </Link>
         </div>
