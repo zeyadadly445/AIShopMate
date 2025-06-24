@@ -56,168 +56,161 @@ export async function POST(
 
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 2. Generate AI response
-    let aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory)
-    let aiDebug: any = { success: false, error: 'not attempted', stage: 'init' }
+    // 2. Check if AI key exists
+    const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
 
-    try {
-      const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-
-      if (!chuteAIApiKey) {
-        aiDebug = { success: false, error: 'API key not found', stage: 'env_check' }
-        console.log('⚠️ AI API key not found, using smart fallback')
-        return NextResponse.json({ 
-          response: aiResponse,
-          debug: { aiDebug, merchant: merchant.businessName, fallbackUsed: true }
-        })
-      }
-
-      console.log('🚀 Sending enhanced streaming request with 128K tokens...')
-      aiDebug.stage = 'calling_api'
-
-      // ENHANCED WITH STREAMING AND HIGH TOKEN LIMIT
-      const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${chuteAIApiKey}`,
-          'Content-Type': 'application/json'
+    if (!chuteAIApiKey) {
+      console.log('⚠️ AI API key not found, using smart fallback')
+      return NextResponse.json({ 
+        response: generateSmartFallback(message, merchant.businessName, conversationHistory),
+        merchant: {
+          businessName: merchant.businessName,
+          primaryColor: merchant.primaryColor
         },
-        body: JSON.stringify({
-          model: 'deepseek-ai/DeepSeek-V3-0324',
-          messages: [
-            {
-              role: 'user',
-              content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية بشكل مفصل ومفيد على: ${message}`
-            }
-          ],
-          stream: true,
-          max_tokens: 128000,
-          temperature: 0.7
-        })
+        status: 'fallback_no_key'
       })
-      
-      console.log(`📦 Status: ${response.status}`)
-      
-      if (response.ok) {
-        console.log('✅ Starting streaming response processing...')
-        
-        // Handle streaming response
-        if (response.body) {
+    }
+
+    // 3. Create REAL streaming response
+    console.log('🚀 Creating real-time streaming response...')
+    
+    const encoder = new TextEncoder()
+    
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          console.log('📡 Starting AI streaming request...')
+          
+          const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${chuteAIApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'deepseek-ai/DeepSeek-V3-0324',
+              messages: [
+                {
+                  role: 'user',
+                  content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية بشكل مفصل ومفيد على: ${message}`
+                }
+              ],
+              stream: true,
+              max_tokens: 128000,
+              temperature: 0.7
+            })
+          })
+          
+          if (!response.ok) {
+            console.log('❌ AI request failed, sending fallback')
+            const fallback = generateSmartFallback(message, merchant.businessName, conversationHistory)
+            
+            // Send fallback as JSON
+            controller.enqueue(encoder.encode(JSON.stringify({
+              response: fallback,
+              merchant: {
+                businessName: merchant.businessName,
+                primaryColor: merchant.primaryColor
+              },
+              status: 'fallback_ai_error'
+            })))
+            controller.close()
+            return
+          }
+          
+          if (!response.body) {
+            throw new Error('No response body')
+          }
+          
+          // Send initial metadata
+          controller.enqueue(encoder.encode(JSON.stringify({
+            type: 'start',
+            merchant: {
+              businessName: merchant.businessName,
+              primaryColor: merchant.primaryColor
+            },
+            status: 'streaming'
+          }) + '\n'))
+          
+          console.log('✅ Starting real-time streaming...')
+          
           const reader = response.body.getReader()
           const decoder = new TextDecoder()
-          let fullResponse = ''
           
-          try {
-            while (true) {
-              const { done, value } = await reader.read()
-              
-              if (done) {
-                console.log('✅ Streaming completed')
-                break
-              }
-              
-              const chunk = decoder.decode(value, { stream: true })
-              const lines = chunk.split('\n')
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6).trim()
+          while (true) {
+            const { done, value } = await reader.read()
+            
+            if (done) {
+              console.log('✅ Stream completed')
+              // Send completion signal
+              controller.enqueue(encoder.encode(JSON.stringify({
+                type: 'done'
+              }) + '\n'))
+              break
+            }
+            
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim()
+                
+                if (data === '[DONE]') {
+                  console.log('✅ AI stream finished')
+                  controller.enqueue(encoder.encode(JSON.stringify({
+                    type: 'done'
+                  }) + '\n'))
+                  break
+                }
+                
+                try {
+                  const parsed = JSON.parse(data)
+                  const content = parsed.choices?.[0]?.delta?.content
                   
-                  if (data === '[DONE]') {
-                    console.log('✅ Stream finished with [DONE]')
-                    break
+                  if (content) {
+                    // Send each piece immediately to client
+                    controller.enqueue(encoder.encode(JSON.stringify({
+                      type: 'content',
+                      content: content
+                    }) + '\n'))
                   }
-                  
-                  try {
-                    const parsed = JSON.parse(data)
-                    const content = parsed.choices?.[0]?.delta?.content
-                    
-                    if (content) {
-                      fullResponse += content
-                    }
-                  } catch (parseError) {
-                    // Skip invalid JSON chunks
-                    console.log('⚠️ Skipping invalid JSON chunk')
-                  }
+                } catch (parseError) {
+                  // Skip invalid chunks
+                  console.log('⚠️ Skipping invalid JSON chunk')
                 }
               }
             }
-            
-            if (fullResponse.trim()) {
-              aiResponse = fullResponse.trim()
-              aiDebug = { 
-                success: true, 
-                error: null, 
-                stage: 'streaming_success',
-                contentLength: aiResponse.length,
-                streaming: true,
-                maxTokens: 128000
-              }
-              console.log('✅ Streaming AI success!', { 
-                responseLength: aiResponse.length,
-                streaming: true 
-              })
-            } else {
-              aiDebug = { 
-                success: false, 
-                error: 'No content in streaming response', 
-                stage: 'no_streaming_content'
-              }
-              console.log('❌ No content in streaming response')
-            }
-          } catch (streamError) {
-            aiDebug = { 
-              success: false, 
-              error: `Streaming error: ${streamError instanceof Error ? streamError.message : String(streamError)}`, 
-              stage: 'streaming_error'
-            }
-            console.log('❌ Streaming processing error:', streamError)
           }
-        } else {
-          aiDebug = { 
-            success: false, 
-            error: 'No response body for streaming', 
-            stage: 'no_stream_body'
-          }
-          console.log('❌ No response body available for streaming')
+          
+          controller.close()
+          
+        } catch (error) {
+          console.error('💥 Streaming error:', error)
+          
+          // Send fallback on error
+          const fallback = generateSmartFallback(message, merchant.businessName, conversationHistory)
+          controller.enqueue(encoder.encode(JSON.stringify({
+            type: 'fallback',
+            response: fallback,
+            merchant: {
+              businessName: merchant.businessName,
+              primaryColor: merchant.primaryColor
+            },
+            error: error instanceof Error ? error.message : String(error)
+          }) + '\n'))
+          
+          controller.close()
         }
-      } else {
-        const errorData = await response.json()
-        aiDebug = { 
-          success: false, 
-          error: `HTTP ${response.status}: ${JSON.stringify(errorData)}`, 
-          stage: 'http_error',
-          status: response.status
-        }
-        console.log('❌ Error response:', errorData)
       }
-
-    } catch (aiError) {
-      aiDebug = { 
-        success: false, 
-        error: aiError instanceof Error ? aiError.message : String(aiError), 
-        stage: 'exception',
-        errorType: aiError instanceof Error ? aiError.constructor.name : typeof aiError
-      }
-      console.log('❌ AI request failed:', aiError)
-    }
-
-    // 4. Return response (no database saving)
-    return NextResponse.json({ 
-      response: aiResponse,
-      merchant: {
-        businessName: merchant.businessName,
-        primaryColor: merchant.primaryColor
-      },
-      timestamp: new Date().toISOString(),
-      status: aiDebug.success ? 'success_ai_streaming' : 'success_fallback',
-      debug: {
-        ai: aiDebug,
-        historyLength: conversationHistory.length,
-        messageLength: message.length,
-        fallbackUsed: !aiDebug.success,
-        streaming: aiDebug.success,
-        maxTokens: 128000
+    })
+    
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
       }
     })
 

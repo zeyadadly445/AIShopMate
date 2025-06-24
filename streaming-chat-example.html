@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Streaming Chat Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .ai-message {
+            background: #e9ecef;
+            color: #333;
+            margin-right: auto;
+            position: relative;
+        }
+
+        .typing-indicator {
+            background: #e9ecef;
+            color: #666;
+            margin-right: auto;
+            font-style: italic;
+            border: 2px dashed #007bff;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        #messageInput:focus {
+            border-color: #007bff;
+        }
+
+        #sendBtn {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            background: #0056b3;
+        }
+
+        #sendBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .streaming-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 20px;
+            background: #007bff;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 اختبار الستريم المباشر</h1>
+            <p>تجربة شات مع AI بالستريم الفوري مثل ChatGPT</p>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai-message">
+                مرحباً! أنا مساعد ذكي. أرسل لي رسالة وسترى الرد يظهر كلمة كلمة في الوقت الفعلي! 😊
+            </div>
+        </div>
+
+        <div class="status" id="status">
+            جاهز للمحادثة...
+        </div>
+
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="اكتب رسالتك هنا..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button id="sendBtn" onclick="sendMessage()">
+                إرسال
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const status = document.getElementById('status');
+
+        let isStreaming = false;
+        let currentStreamingMessage = null;
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isStreaming) {
+                sendMessage();
+            }
+        }
+
+        function addUserMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user-message';
+            messageDiv.textContent = message;
+            chatContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function startAIMessage() {
+            currentStreamingMessage = document.createElement('div');
+            currentStreamingMessage.className = 'message ai-message';
+            
+            const cursor = document.createElement('span');
+            cursor.className = 'streaming-cursor';
+            currentStreamingMessage.appendChild(cursor);
+            
+            chatContainer.appendChild(currentStreamingMessage);
+            scrollToBottom();
+            return currentStreamingMessage;
+        }
+
+        function appendToAIMessage(content) {
+            if (currentStreamingMessage) {
+                // Remove cursor temporarily
+                const cursor = currentStreamingMessage.querySelector('.streaming-cursor');
+                if (cursor) cursor.remove();
+                
+                // Add new content
+                currentStreamingMessage.appendChild(document.createTextNode(content));
+                
+                // Add cursor back
+                const newCursor = document.createElement('span');
+                newCursor.className = 'streaming-cursor';
+                currentStreamingMessage.appendChild(newCursor);
+                
+                scrollToBottom();
+            }
+        }
+
+        function finishAIMessage() {
+            if (currentStreamingMessage) {
+                // Remove cursor
+                const cursor = currentStreamingMessage.querySelector('.streaming-cursor');
+                if (cursor) cursor.remove();
+                
+                currentStreamingMessage = null;
+            }
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isStreaming) return;
+
+            // Add user message
+            addUserMessage(message);
+            messageInput.value = '';
+            
+            // Update UI
+            isStreaming = true;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'جاري الإرسال...';
+            status.textContent = 'جاري معالجة الرسالة...';
+
+            try {
+                console.log('🚀 Sending streaming request...');
+                
+                const response = await fetch('/api/chat-local/shoes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversationHistory: []
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                console.log('✅ Response received, starting stream processing...');
+                status.textContent = 'جاري الكتابة...';
+
+                // Start AI message container
+                const aiMessageDiv = startAIMessage();
+
+                // Read streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        console.log('✅ Stream completed');
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            try {
+                                const data = JSON.parse(line);
+                                
+                                if (data.type === 'start') {
+                                    console.log('🎬 Stream started');
+                                    status.textContent = 'بدء الكتابة...';
+                                } else if (data.type === 'content') {
+                                    console.log('📝 Content chunk:', data.content);
+                                    appendToAIMessage(data.content);
+                                } else if (data.type === 'done') {
+                                    console.log('✅ Stream done');
+                                    finishAIMessage();
+                                    status.textContent = 'اكتمل الرد!';
+                                    break;
+                                } else if (data.type === 'fallback') {
+                                    console.log('⚠️ Fallback response');
+                                    // Remove streaming message and add fallback
+                                    if (currentStreamingMessage) {
+                                        currentStreamingMessage.remove();
+                                    }
+                                    
+                                    const fallbackDiv = document.createElement('div');
+                                    fallbackDiv.className = 'message ai-message';
+                                    fallbackDiv.textContent = data.response;
+                                    chatContainer.appendChild(fallbackDiv);
+                                    
+                                    status.textContent = 'تم استخدام الرد الاحتياطي';
+                                    break;
+                                }
+                            } catch (parseError) {
+                                console.log('⚠️ Invalid JSON line:', line);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('💥 Error:', error);
+                status.textContent = 'حدث خطأ في الاتصال';
+                
+                // Add error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'message ai-message';
+                errorDiv.textContent = 'عذراً، حدث خطأ في النظام. يرجى المحاولة مرة أخرى.';
+                errorDiv.style.borderLeft = '4px solid #dc3545';
+                chatContainer.appendChild(errorDiv);
+            } finally {
+                // Reset UI
+                isStreaming = false;
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'إرسال';
+                setTimeout(() => {
+                    status.textContent = 'جاهز للمحادثة...';
+                }, 2000);
+                scrollToBottom();
+            }
+        }
+
+        // Focus input on load
+        window.onload = () => {
+            messageInput.focus();
+        };
+    </script>
+</body>
+</html> 
