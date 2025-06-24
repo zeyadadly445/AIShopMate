@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
             content: `${testPrompt}\n\nCustomer: ${testMessage}`
           }
         ],
-        max_tokens: 300,
+        max_tokens: 60000,
         temperature: 0.7,
         stream: false
       })
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json()
+    const { message, stream = false } = await request.json()
     
     if (!message) {
       return NextResponse.json({
@@ -105,9 +105,9 @@ export async function POST(request: NextRequest) {
             content: `${promptContext}\n\nCustomer: ${message}`
           }
         ],
-        max_tokens: 300,
+        max_tokens: 60000,
         temperature: 0.7,
-        stream: false
+        stream: stream
       })
     })
 
@@ -120,22 +120,38 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const data = await aiResponse.json()
-    
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      return NextResponse.json({
-        success: true,
-        userMessage: message,
-        aiResponse: data.choices[0].message.content.trim(),
-        usage: data.usage,
-        status: 'success'
+    if (stream) {
+      // Return streaming response
+      return new Response(aiResponse.body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
       })
     } else {
-      return NextResponse.json({
-        error: 'Invalid AI API response format',
-        response: data,
-        status: 'error'
-      }, { status: 500 })
+      // Non-streaming response
+      const data = await aiResponse.json()
+      
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return NextResponse.json({
+          success: true,
+          userMessage: message,
+          aiResponse: data.choices[0].message.content.trim(),
+          usage: data.usage,
+          maxTokensUsed: 60000,
+          status: 'success'
+        })
+      } else {
+        return NextResponse.json({
+          error: 'Invalid AI API response format',
+          response: data,
+          status: 'error'
+        }, { status: 500 })
+      }
     }
 
   } catch (error) {

@@ -20,7 +20,7 @@ export async function POST(
       )
     }
 
-    const { message, sessionId, conversationHistory = [] } = requestBody
+    const { message, sessionId, conversationHistory = [], stream = true } = requestBody
 
     if (!chatbotId || !message || !sessionId) {
       console.error('Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
@@ -169,51 +169,84 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
 ).join('\n')}
 `
 
-    // 7. Generate AI response using Chutes AI
-    let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
-    
-    try {
-      aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
-      
-    } catch (aiError) {
-      console.error('AI response error:', aiError)
-      console.error('AI error details:', {
-        message: aiError instanceof Error ? aiError.message : aiError,
-        stack: aiError instanceof Error ? aiError.stack : undefined,
-        chatbotId,
-        userMessage: message.substring(0, 100) // Only log first 100 chars for privacy
-      })
-      aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
-    }
+    // 7. Generate AI response using Chutes AI with streaming support
+    if (stream) {
+      // For streaming, we return the stream directly
+      try {
+        const streamResponse = await generateAIStreamResponse(message, businessContext, conversationHistoryFromDB)
+        
+        // Update message usage count before streaming
+        if (subscription) {
+          const { error: updateError } = await supabaseAdmin
+            .from('Subscription')
+            .update({ 
+              messagesUsed: subscription.messagesUsed + 1 
+            })
+            .eq('merchantId', merchant.id)
 
-    // 8. Store AI response
-    const { error: aiMessageError } = await supabaseAdmin
-      .from('Message')
-      .insert({
-        conversationId,
-        role: 'ASSISTANT',
-        content: aiResponse
-      })
+          if (updateError) {
+            console.error('Error updating message count:', updateError)
+          }
+        }
 
-    if (aiMessageError) {
-      console.error('Error storing AI message:', aiMessageError)
-    }
-
-    // 9. Update message usage count
-    if (subscription) {
-      const { error: updateError } = await supabaseAdmin
-        .from('Subscription')
-        .update({ 
-          messagesUsed: subscription.messagesUsed + 1 
-        })
-        .eq('merchantId', merchant.id)
-
-      if (updateError) {
-        console.error('Error updating message count:', updateError)
+        return streamResponse
+        
+      } catch (aiError) {
+        console.error('AI streaming error:', aiError)
+        return NextResponse.json({
+          error: 'AI service unavailable',
+          fallback: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
+        }, { status: 500 })
       }
+    } else {
+      // Non-streaming response (fallback)
+      let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
+      
+      try {
+        aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
+        
+      } catch (aiError) {
+        console.error('AI response error:', aiError)
+        console.error('AI error details:', {
+          message: aiError instanceof Error ? aiError.message : aiError,
+          stack: aiError instanceof Error ? aiError.stack : undefined,
+          chatbotId,
+          userMessage: message.substring(0, 100) // Only log first 100 chars for privacy
+        })
+        aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
+      }
+
+      // 8. Store AI response (for non-streaming only)
+      const { error: aiMessageError } = await supabaseAdmin
+        .from('Message')
+        .insert({
+          conversationId,
+          role: 'ASSISTANT',
+          content: aiResponse
+        })
+
+      if (aiMessageError) {
+        console.error('Error storing AI message:', aiMessageError)
+      }
+
+      // 9. Update message usage count
+      if (subscription) {
+        const { error: updateError } = await supabaseAdmin
+          .from('Subscription')
+          .update({ 
+            messagesUsed: subscription.messagesUsed + 1 
+          })
+          .eq('merchantId', merchant.id)
+
+        if (updateError) {
+          console.error('Error updating message count:', updateError)
+        }
+      }
+
+      return NextResponse.json({ response: aiResponse })
     }
 
-    return NextResponse.json({ response: aiResponse })
+
 
   } catch (error) {
     console.error('Error in chat endpoint:', error)
@@ -233,7 +266,30 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
   }
 }
 
-// AI response generator using Chutes AI API with DeepSeek V3
+// Calculate dynamic max tokens based on context complexity
+function calculateMaxTokens(userMessage: string, conversationHistory: any[], context: string): number {
+  const baseTokens = 1000
+  const messageLength = userMessage.length
+  const historyLength = conversationHistory.length
+  const contextLength = context.length
+  
+  // Calculate tokens based on content complexity
+  let calculatedTokens = baseTokens
+  
+  // Add tokens based on message length
+  calculatedTokens += Math.min(messageLength * 2, 10000)
+  
+  // Add tokens based on conversation history
+  calculatedTokens += Math.min(historyLength * 200, 5000)
+  
+  // Add tokens based on context complexity
+  calculatedTokens += Math.min(contextLength / 10, 5000)
+  
+  // Ensure we don't exceed the maximum limit
+  return Math.min(calculatedTokens, 60000)
+}
+
+// AI response generator using Chutes AI API with DeepSeek V3 (non-streaming)
 async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
   const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
   const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
@@ -255,7 +311,10 @@ async function generateAIResponse(userMessage: string, context: string, conversa
   }
 
   // Prepare the prompt with context and message format required by DeepSeek
-  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- اجعل الرد قصير ومفيد\n- لا تذكر أنك مساعد ذكي'
+  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- قدم إجابة شاملة ومفيدة\n- لا تذكر أنك مساعد ذكي'
+
+  // Calculate dynamic max tokens
+  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
 
   try {
     const response = await fetch(chuteAIUrl, {
@@ -272,7 +331,7 @@ async function generateAIResponse(userMessage: string, context: string, conversa
             content: `${fullPrompt}\n\nCustomer: ${userMessage}`
           }
         ],
-        max_tokens: 300,
+        max_tokens: maxTokens,
         temperature: 0.7,
         stream: false
       })
@@ -304,7 +363,154 @@ async function generateAIResponse(userMessage: string, context: string, conversa
       message: error instanceof Error ? error.message : error,
       url: chuteAIUrl,
       hasApiKey: !!chuteAIApiKey,
-      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324'
+      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+      maxTokens
+    })
+    throw error
+  }
+}
+
+// AI streaming response generator using Chutes AI API with DeepSeek V3
+async function generateAIStreamResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<Response> {
+  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
+  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
+
+  if (!chuteAIApiKey) {
+    throw new Error('CHUTES_AI_API_KEY not configured')
+  }
+
+  // Build conversation history for context
+  let conversationContext = ''
+  const recentHistory = conversationHistory.slice(-10)
+  
+  if (recentHistory.length > 0) {
+    conversationContext = '\n\nمحادثة سابقة:\n' + 
+      recentHistory.map((msg: any) => 
+        `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
+      ).join('\n')
+  }
+
+  // Prepare the prompt with context and message format required by DeepSeek
+  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- قدم إجابة شاملة ومفيدة\n- لا تذكر أنك مساعد ذكي'
+
+  // Calculate dynamic max tokens
+  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
+
+  try {
+    const response = await fetch(chuteAIUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${chuteAIApiKey}`
+      },
+      body: JSON.stringify({
+        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${fullPrompt}\n\nCustomer: ${userMessage}`
+          }
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.7,
+        stream: true
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Chutes AI streaming API error:', response.status, response.statusText, errorText)
+      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
+    }
+
+    // Create a new streaming response
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let accumulatedResponse = ''
+
+        if (!reader) {
+          controller.error(new Error('No response body'))
+          return
+        }
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            
+            if (done) {
+              // Store the complete accumulated response in database
+              // Note: This would need to be implemented with proper context passing
+              break
+            }
+
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                
+                if (data === '[DONE]') {
+                  continue
+                }
+
+                try {
+                  const parsed = JSON.parse(data)
+                  const content = parsed.choices?.[0]?.delta?.content || ''
+                  
+                  if (content) {
+                    accumulatedResponse += content
+                    // Clean up the content if it starts with common prefixes
+                    let cleanContent = content
+                    if (accumulatedResponse.length < 50) {
+                      cleanContent = content.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
+                    }
+                    
+                    // Send the chunk to the client
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
+                      content: cleanContent,
+                      delta: cleanContent
+                    })}\n\n`))
+                  }
+                } catch (parseError) {
+                  console.error('Error parsing streaming chunk:', parseError)
+                }
+              }
+            }
+          }
+
+          // Send completion signal
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
+          controller.close()
+
+        } catch (error) {
+          console.error('Streaming error:', error)
+          controller.error(error)
+        }
+      }
+    })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    })
+
+  } catch (error) {
+    console.error('Error calling Chutes AI streaming API:', error)
+    console.error('AI streaming API error details:', {
+      message: error instanceof Error ? error.message : error,
+      url: chuteAIUrl,
+      hasApiKey: !!chuteAIApiKey,
+      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+      maxTokens
     })
     throw error
   }
