@@ -20,11 +20,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Import prisma dynamically
-    const { prisma } = await import('@/lib/prisma')
+    // Import smart fallback system
+    const { getDB } = await import('@/lib/prisma-simple')
+    const db = await getDB()
 
     // Check if email already exists
-    const existingMerchant = await prisma.merchant.findUnique({
+    const existingMerchant = await db.merchant.findUnique({
       where: { email }
     })
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if chatbotId already exists
-    const existingChatbotId = await prisma.merchant.findUnique({
+    const existingChatbotId = await db.merchant.findUnique({
       where: { chatbotId }
     })
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hashPassword(password)
 
     // Create merchant with subscription (let Supabase generate UUIDs)
-    const merchant = await prisma.merchant.create({
+    const merchant = await db.merchant.create({
       data: {
         email,
         password: hashedPassword,

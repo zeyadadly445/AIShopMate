@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getDB } from '@/lib/prisma-simple'
 import { comparePassword, signToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
@@ -14,8 +14,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get database connection with fallback
+    const db = await getDB()
+    
     // Find merchant
-    const merchant = await prisma.merchant.findUnique({
+    const merchant = await db.merchant.findUnique({
       where: { email },
       include: { subscription: true }
     })

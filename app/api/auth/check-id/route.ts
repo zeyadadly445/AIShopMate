@@ -19,12 +19,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Try to connect to database
+    // Try to connect to database using smart fallback
     try {
-      const { prisma } = await import('@/lib/prisma')
+      const { getDB } = await import('@/lib/prisma-simple')
+      const db = await getDB()
       
       // Check if chatbotId exists
-      const existingMerchant = await prisma.merchant.findUnique({
+      const existingMerchant = await db.merchant.findUnique({
         where: { chatbotId }
       })
 
