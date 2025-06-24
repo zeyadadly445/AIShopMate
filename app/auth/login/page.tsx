@@ -57,7 +57,7 @@ export default function LoginPage() {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             مرحباً بك مرة أخرى
           </h2>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-sm text-gray-900">
             سجل الدخول للوصول إلى لوحة تحكم متجرك
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-900">
                 ليس لديك حساب؟{' '}
                 <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
                   إنشاء حساب جديد

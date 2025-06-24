@@ -114,7 +114,7 @@ export default function RegisterPage() {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             إنشاء حساب جديد
           </h2>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-sm text-gray-900">
             أنشئ حساب جديد للحصول على شات بوت ذكي لمتجرك
           </p>
         </div>
@@ -248,7 +248,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-900">
                 لديك حساب بالفعل؟{' '}
                 <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
                   تسجيل الدخول
