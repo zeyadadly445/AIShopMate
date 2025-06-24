@@ -56,28 +56,12 @@ export async function POST(
 
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 2. Prepare context for AI with business info and conversation history
-    const businessContext = `
-أنت مساعد ذكي لمتجر "${merchant.businessName}".
+    // 2. Prepare SIMPLIFIED context for AI (to avoid timeouts)
+    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية وكن مفيداً وودوداً.
 
-معلومات المتجر:
-${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) => 
-  `- ${ds.type}: ${ds.title} (${ds.url})`
-).join('\n') || 'لا توجد مصادر بيانات متاحة حالياً'}
-
-تعليمات مهمة:
-- تحدث باللغة العربية دائماً
-- كن مهذباً ومساعداً وودوداً
-- ركز على منتجات وخدمات "${merchant.businessName}"
-- استخدم المحادثة السابقة لفهم السياق وتقديم إجابات أفضل
-- إذا لم تجد إجابة محددة، انصح العميل بالتواصل مع المتجر مباشرة
-- لا تتحدث عن متاجر أخرى أو منافسين
-- احتفظ بالطابع المهني والودود
-- قدم معلومات مفيدة وعملية للعملاء
-
-المحادثة السابقة:
-${conversationHistory.slice(-10).map((msg: ChatMessage) => 
-  `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
+المحادثة الأخيرة:
+${conversationHistory.slice(-3).map((msg: ChatMessage) => 
+  `${msg.role === 'user' ? 'عميل' : 'مساعد'}: ${msg.content}`
 ).join('\n')}
 `
 
@@ -98,158 +82,64 @@ ${conversationHistory.slice(-10).map((msg: ChatMessage) =>
         })
       }
 
-      // Calculate dynamic max tokens based on context
-      const baseTokens = 1000
-      const messageLength = message.length
-      const historyLength = conversationHistory.length
-      const contextLength = businessContext.length
-      
-      let maxTokens = baseTokens
-      maxTokens += Math.min(messageLength * 2, 5000)
-      maxTokens += Math.min(historyLength * 100, 3000)
-      maxTokens += Math.min(contextLength / 10, 2000)
-      maxTokens = Math.min(maxTokens, 8000) // Reasonable limit for faster responses
+      // Calculate REDUCED max tokens to avoid timeouts
+      const maxTokens = Math.min(500, 1000) // Much smaller tokens
 
-      console.log('🤖 Calling AI API...', { maxTokens, historyLength, messageLength: message.length })
+      console.log('🤖 Calling AI API...', { maxTokens, historyLength: conversationHistory.length, messageLength: message.length })
       aiDebug.stage = 'calling_api'
 
       const requestBody = {
-        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        model: 'deepseek-ai/DeepSeek-V3-0324', // Force stable model
         messages: [
           {
             role: 'user',
-            content: `${businessContext}\n\nرسالة العميل الجديدة: ${message}`
+            content: `أنت مساعد ذكي لمتجر "${merchant.businessName}". رد باللغة العربية على: ${message}`
           }
         ],
-        max_tokens: maxTokens,
-        temperature: 0.7,
+        max_tokens: 500, // Fixed small amount
+        temperature: 0.3, // Lower temperature
         stream: false
       }
 
-      // Try with retry mechanism
-      let response: Response | null = null
-      let lastError = ''
-      
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          console.log(`🔄 AI API attempt ${attempt}/3`)
-          
-          response = await fetch(chuteAIUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${chuteAIApiKey}`
-            },
-            body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(10000) // 10 second timeout
-          })
-          
-          if (response.ok) {
-            console.log(`✅ AI API succeeded on attempt ${attempt}`)
-            break
-          } else {
-            lastError = `HTTP ${response.status}: ${await response.text()}`
-            console.log(`❌ AI API failed attempt ${attempt}: ${lastError}`)
-            if (attempt < 3) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Progressive delay
-            }
-          }
-        } catch (fetchError) {
-          lastError = fetchError instanceof Error ? fetchError.message : String(fetchError)
-          console.log(`❌ AI API error attempt ${attempt}: ${lastError}`)
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-          }
-        }
-      }
-
-      if (!response || !response.ok) {
-        aiDebug = { 
-          success: false, 
-          error: `All retry attempts failed. Last error: ${lastError}`, 
-          stage: 'retry_exhausted',
-          attempts: 3
-        }
-        console.log('❌ All AI API retry attempts failed, using smart fallback')
+      // Simplified single attempt (no complex retry)
+      try {
+        console.log('🔄 Single AI API attempt')
         
-        // Update the smart fallback to indicate AI unavailable
-        aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory) + 
-                    '\n\n*ملاحظة: خدمة الذكاء الاصطناعي غير متاحة مؤقتاً، لكنني سعيد بمساعدتك!*'
-        
-        return NextResponse.json({ 
-          response: aiResponse,
-          merchant: {
-            businessName: merchant.businessName,
-            primaryColor: merchant.primaryColor
+        const response = await fetch(chuteAIUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${chuteAIApiKey}`
           },
-          timestamp: new Date().toISOString(),
-          status: 'fallback_used',
-          debug: {
-            ai: aiDebug,
-            contextLength: businessContext.length,
-            historyLength: conversationHistory.length,
-            messageLength: message.length,
-            fallbackUsed: true
-          }
-        })
-      }
-
-      aiDebug.stage = 'response_received'
-      
-      if (response.ok) {
-        const data = await response.json()
-        aiDebug.stage = 'parsing_response'
-        
-        console.log('📝 AI API Response structure:', {
-          hasChoices: !!data.choices,
-          choicesLength: data.choices?.length,
-          hasContent: !!data.choices?.[0]?.message?.content,
-          contentLength: data.choices?.[0]?.message?.content?.length
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(5000) // Shorter timeout: 5 seconds
         })
         
-        if (data.choices?.[0]?.message?.content) {
-          const rawResponse = data.choices[0].message.content.trim()
+        if (response.ok) {
+          const data = await response.json()
+          const aiContent = data.choices?.[0]?.message?.content?.trim()
           
-          // Clean up common prefixes
-          aiResponse = rawResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
-          
-          // If cleaning removed everything, use original
-          if (!aiResponse.trim()) {
-            aiResponse = rawResponse
+          if (aiContent) {
+            aiResponse = aiContent
+            aiDebug = { success: true, error: null, stage: 'success' }
+            console.log('✅ AI success with simplified approach')
+          } else {
+            throw new Error('No content in response')
           }
-          
-          aiDebug = { 
-            success: true, 
-            error: null, 
-            stage: 'success',
-            rawLength: rawResponse.length,
-            cleanedLength: aiResponse.length,
-            wasCleaned: rawResponse !== aiResponse
-          }
-          
-          console.log('✅ AI response generated successfully', {
-            originalLength: rawResponse.length,
-            finalLength: aiResponse.length
-          })
         } else {
-          aiDebug = { 
-            success: false, 
-            error: 'No content in AI response', 
-            stage: 'no_content',
-            responseStructure: Object.keys(data)
-          }
-          console.log('❌ AI response has no content:', data)
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
-      } else {
-        const errorText = await response.text()
+      } catch (fetchError) {
         aiDebug = { 
           success: false, 
-          error: `HTTP ${response.status}: ${errorText}`, 
-          stage: 'http_error',
-          status: response.status,
-          statusText: response.statusText
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError), 
+          stage: 'simplified_failed'
         }
-        console.log('⚠️ AI API failed:', response.status, response.statusText, errorText)
+        console.log('❌ Simplified AI failed:', fetchError)
+        
+        // Enhanced smart fallback
+        aiResponse = generateSmartFallback(message, merchant.businessName, conversationHistory)
       }
 
     } catch (aiError) {
