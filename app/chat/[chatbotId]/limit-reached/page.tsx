@@ -169,7 +169,7 @@ export default function LimitReachedPage({ params }: LimitReachedPageProps) {
                 </div>
               </div>
 
-              <div className="mt-6 text-sm text-gray-500">
+              <div className="mt-6 text-sm text-gray-600">
                 💡 <strong>نصيحة:</strong> احفظ هذا الرابط وجرب مرة أخرى لاحقاً، قد تعود الخدمة للعمل عند تجديد الاشتراك.
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function LimitReachedPage({ params }: LimitReachedPageProps) {
 
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-sm text-gray-500">
+            <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse text-sm text-gray-600">
               <span>مدعوم بـ</span>
               <span className="font-semibold text-blue-600">AI Shop Mate</span>
               <span>•</span>

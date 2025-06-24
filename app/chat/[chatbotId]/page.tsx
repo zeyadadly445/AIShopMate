@@ -429,7 +429,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             )}
             <div>
               <h1 className="text-xl font-bold text-gray-800">{merchant.businessName}</h1>
-              <p className="text-sm text-gray-500">مساعد ذكي • متاح الآن</p>
+              <p className="text-sm text-gray-600">مساعد ذكي • متاح الآن</p>
             </div>
             <div className="flex-1"></div>
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -465,7 +465,7 @@ export default function ChatPage({ params }: ChatPageProps) {
               >
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-xs mt-2 ${
-                  message.role === 'user' ? 'text-white/80' : 'text-gray-500'
+                  message.role === 'user' ? 'text-white/80' : 'text-gray-600'
                 }`}>
                   {message.timestamp.toLocaleTimeString('ar-SA', { 
                     hour: '2-digit', 
@@ -504,7 +504,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500">جاري التحضير...</span>
+                  <span className="text-sm text-gray-600">جاري التحضير...</span>
                 </div>
               </div>
             </div>
@@ -544,7 +544,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             </Button>
           </div>
           
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
             <p>اضغط Enter للإرسال • Shift + Enter للسطر الجديد</p>
             <p className="flex items-center space-x-1 rtl:space-x-reverse">
               <span>مدعوم بـ</span>

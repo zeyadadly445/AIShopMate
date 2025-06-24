@@ -193,7 +193,7 @@ export default function Home() {
               الأكثر شعبية
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">المتقدمة</h3>
-            <div className="text-3xl font-bold text-blue-600 mb-4">$29<span className="text-lg text-gray-500">/شهر</span></div>
+            <div className="text-3xl font-bold text-blue-600 mb-4">$29<span className="text-lg text-gray-600">/شهر</span></div>
             <p className="text-gray-600 mb-6">للمتاجر المتنامية</p>
             <ul className="text-right space-y-3 mb-8">
               <li className="flex items-center">
@@ -228,7 +228,7 @@ export default function Home() {
 
           <Card variant="outlined" className="text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-2">المؤسسية</h3>
-            <div className="text-3xl font-bold text-blue-600 mb-4">$99<span className="text-lg text-gray-500">/شهر</span></div>
+            <div className="text-3xl font-bold text-blue-600 mb-4">$99<span className="text-lg text-gray-600">/شهر</span></div>
             <p className="text-gray-600 mb-6">للمتاجر الكبيرة</p>
             <ul className="text-right space-y-3 mb-8">
               <li className="flex items-center">
