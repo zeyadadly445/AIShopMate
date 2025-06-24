@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       .from('Merchant')
       .select(`
         id,
+        chatbotId,
         businessName,
         welcomeMessage,
         primaryColor,
