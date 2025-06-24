@@ -53,7 +53,10 @@ export async function GET(request: NextRequest) {
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'Rollback test transaction') {
-        insertTest = { ...insertTest, rollback: 'success' }
+        insertTest = { 
+          ...(insertTest || {}), 
+          rollback: 'success' 
+        }
       } else {
         insertTest = { 
           status: 'failed', 
