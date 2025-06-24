@@ -57,7 +57,7 @@ export default function LoginPage() {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             مرحباً بك مرة أخرى
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-700">
             سجل الدخول للوصول إلى لوحة تحكم متجرك
           </p>
         </div>
@@ -116,12 +116,12 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">أو</span>
+                <span className="px-2 bg-white text-gray-600">أو</span>
               </div>
             </div>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-700">
                 ليس لديك حساب؟{' '}
                 <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
                   إنشاء حساب جديد
@@ -133,7 +133,7 @@ export default function LoginPage() {
 
         {/* Back to Home */}
         <div className="text-center">
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+          <Link href="/" className="text-sm text-gray-600 hover:text-gray-800">
             ← العودة للصفحة الرئيسية
           </Link>
         </div>

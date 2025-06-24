@@ -433,13 +433,11 @@ export default function ChatPage({ params }: ChatPageProps) {
             </div>
             <div className="flex-1"></div>
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-                <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {isStreaming ? 'يكتب...' : 'متصل'}
-                </span>
-                <span className="text-xs text-gray-400">• محفوظ محلياً</span>
-              </div>
+              <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+              <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
+                {isStreaming ? 'يكتب...' : 'متصل'}
+              </span>
+              <span className="text-xs text-gray-600">• محفوظ محلياً</span>
             </div>
           </div>
         </div>

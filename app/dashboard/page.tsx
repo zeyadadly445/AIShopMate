@@ -222,7 +222,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-600 truncate">
                       الرسائل المستخدمة
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-600 truncate">
                       خطة الاشتراك
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mr-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-600 truncate">
                       حالة الحساب
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">

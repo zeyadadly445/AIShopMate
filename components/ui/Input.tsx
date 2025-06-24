@@ -19,13 +19,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {icon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <div className="text-gray-400">{icon}</div>
+              <div className="text-gray-600">{icon}</div>
             </div>
           )}
           <input
             type={type}
             className={clsx(
-              'block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors',
+              'block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors',
               {
                 'border-red-300 focus:ring-red-500 focus:border-red-500': error,
                 'pr-10': icon,

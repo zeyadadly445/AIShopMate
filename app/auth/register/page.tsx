@@ -114,8 +114,8 @@ export default function RegisterPage() {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             إنشاء حساب جديد
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            ابدأ رحلتك مع الذكاء الاصطناعي لمتجرك
+          <p className="mt-2 text-sm text-gray-700">
+            أنشئ حساب جديد للحصول على شات بوت ذكي لمتجرك
           </p>
         </div>
 
@@ -182,7 +182,7 @@ export default function RegisterPage() {
                   )
                 }
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-600">
                 سيكون رابط متجرك: ai-shop-mate.vercel.app/<span className="font-medium">{formData.chatbotId || 'اسم-المتجر'}</span>
               </p>
               {idAvailable === false && (
@@ -237,18 +237,18 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">أو</span>
+                <span className="px-2 bg-white text-gray-600">أو</span>
               </div>
             </div>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-700">
                 لديك حساب بالفعل؟{' '}
                 <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
                   تسجيل الدخول
@@ -260,7 +260,7 @@ export default function RegisterPage() {
 
         {/* Back to Home */}
         <div className="text-center">
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+          <Link href="/" className="text-sm text-gray-600 hover:text-gray-800">
             ← العودة للصفحة الرئيسية
           </Link>
         </div>
