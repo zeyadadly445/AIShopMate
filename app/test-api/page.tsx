@@ -50,6 +50,11 @@ export default function TestAPIPage() {
       method: 'GET'
     },
     {
+      name: '🚀 دردشة مباشرة (بدون DB)',
+      endpoint: '/api/chat-direct/shoes',
+      data: { message: 'مرحبا، كيف يمكنني شراء أحذية؟', sessionId: 'test-session' }
+    },
+    {
       name: 'دردشة مبسطة',
       endpoint: '/api/chat-simple/shoes',
       data: { message: 'مرحبا', sessionId: 'test-session' }
