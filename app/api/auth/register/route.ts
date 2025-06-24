@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, signToken } from '@/lib/auth'
-import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,18 +48,16 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password)
 
-    // Create merchant with subscription
+    // Create merchant with subscription (let Supabase generate UUIDs)
     const merchant = await prisma.merchant.create({
       data: {
-        id: uuidv4(),
         email,
         password: hashedPassword,
         businessName,
         chatbotId,
-        phone,
+        phone: phone || null,
         subscription: {
           create: {
-            id: uuidv4(),
             plan: 'BASIC',
             status: 'TRIAL',
             messagesLimit: 1000,
@@ -90,8 +87,32 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Registration error:', error)
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      if (error.message.includes('Unique constraint')) {
+        if (error.message.includes('email')) {
+          return NextResponse.json(
+            { error: 'هذا البريد الإلكتروني مستخدم بالفعل' },
+            { status: 409 }
+          )
+        }
+        if (error.message.includes('chatbotId')) {
+          return NextResponse.json(
+            { error: 'اسم المتجر هذا مستخدم بالفعل' },
+            { status: 409 }
+          )
+        }
+      }
+      
+      return NextResponse.json(
+        { error: 'حدث خطأ في الخادم', details: error.message },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'حدث خطأ في الخادم' },
+      { error: 'حدث خطأ غير متوقع في الخادم' },
       { status: 500 }
     )
   }

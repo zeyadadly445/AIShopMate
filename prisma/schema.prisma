@@ -42,9 +42,9 @@ enum MessageRole {
   ASSISTANT
 }
 
-// Models
+// Models - matching exactly with Supabase SQL
 model Merchant {
-  id             String    @id @default(cuid())
+  id             String    @id @default(dbgenerated("gen_random_uuid()::text"))
   email          String    @unique
   password       String
   businessName   String
@@ -65,7 +65,7 @@ model Merchant {
 }
 
 model Subscription {
-  id            String             @id @default(cuid())
+  id            String             @id @default(dbgenerated("gen_random_uuid()::text"))
   merchantId    String             @unique
   plan          SubscriptionPlan   @default(BASIC)
   status        SubscriptionStatus @default(TRIAL)
@@ -83,7 +83,7 @@ model Subscription {
 }
 
 model MerchantDataSource {
-  id         String   @id @default(cuid())
+  id         String   @id @default(dbgenerated("gen_random_uuid()::text"))
   merchantId String
   type       DataType
   title      String
@@ -100,7 +100,7 @@ model MerchantDataSource {
 }
 
 model Conversation {
-  id         String    @id @default(cuid())
+  id         String    @id @default(dbgenerated("gen_random_uuid()::text"))
   merchantId String
   sessionId  String
   createdAt  DateTime  @default(now())
@@ -115,7 +115,7 @@ model Conversation {
 }
 
 model Message {
-  id             String      @id @default(cuid())
+  id             String      @id @default(dbgenerated("gen_random_uuid()::text"))
   conversationId String
   role           MessageRole
   content        String
