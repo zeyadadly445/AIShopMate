@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       hasJwtSecret: !!process.env.JWT_SECRET,
       hasChuteAIApiKey: !!process.env.CHUTES_AI_API_KEY,
       chuteAIModel: process.env.CHUTES_AI_MODEL || 'not set',
-      chuteAIUrl: process.env.CHUTES_AI_API_URL || 'default: https://api.chutes.ai/v1/chat/completions',
+      chuteAIUrl: process.env.CHUTES_AI_API_URL || 'default: https://llm.chutes.ai/v1/chat/completions',
       databaseUrlPreview: process.env.DATABASE_URL ? 
         process.env.DATABASE_URL.substring(0, 50) + '...' : 'NOT SET'
       }

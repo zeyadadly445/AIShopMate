@@ -191,38 +191,29 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
   }
 }
 
-// AI response generator using Chutes AI API
+// AI response generator using Chutes AI API with DeepSeek V3
 async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
   const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://api.chutes.ai/v1/chat/completions'
+  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
 
   if (!chuteAIApiKey) {
     console.warn('CHUTES_AI_API_KEY not found, using fallback response')
     return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
   }
 
-  // Prepare messages for AI API
-  const messages = [
-    {
-      role: 'system',
-      content: context
-    }
-  ]
-
-  // Add conversation history (last 10 messages)
+  // Build conversation history for context
+  let conversationContext = ''
   const recentHistory = conversationHistory.slice(-10)
-  for (const msg of recentHistory) {
-    messages.push({
-      role: msg.role === 'USER' ? 'user' : 'assistant',
-      content: msg.content
-    })
+  
+  if (recentHistory.length > 0) {
+    conversationContext = '\n\nمحادثة سابقة:\n' + 
+      recentHistory.map((msg: any) => 
+        `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
+      ).join('\n')
   }
 
-  // Add current user message
-  messages.push({
-    role: 'user',
-    content: userMessage
-  })
+  // Prepare the prompt with context and message format required by DeepSeek
+  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- اجعل الرد قصير ومفيد\n- لا تذكر أنك مساعد ذكي'
 
   try {
     const response = await fetch(chuteAIUrl, {
@@ -232,23 +223,34 @@ async function generateAIResponse(userMessage: string, context: string, conversa
         'Authorization': `Bearer ${chuteAIApiKey}`
       },
       body: JSON.stringify({
-        model: process.env.CHUTES_AI_MODEL || 'gpt-3.5-turbo',
-        messages: messages,
-        max_tokens: 500,
+        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${fullPrompt}\n\nCustomer: ${userMessage}`
+          }
+        ],
+        max_tokens: 300,
         temperature: 0.7,
         stream: false
       })
     })
 
     if (!response.ok) {
-      console.error('Chutes AI API error:', response.status, response.statusText)
-      throw new Error(`AI API error: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Chutes AI API error:', response.status, response.statusText, errorText)
+      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
     }
 
     const data = await response.json()
     
     if (data.choices && data.choices[0] && data.choices[0].message) {
-      return data.choices[0].message.content.trim()
+      let aiResponse = data.choices[0].message.content.trim()
+      
+      // Clean up the response if it starts with common prefixes
+      aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
+      
+      return aiResponse || 'شكراً لك على تواصلك معنا. كيف يمكنني مساعدتك؟'
     } else {
       console.error('Unexpected AI API response format:', data)
       throw new Error('Invalid AI API response format')

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-    const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://api.chutes.ai/v1/chat/completions'
+    const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
 
     if (!chuteAIApiKey) {
       return NextResponse.json({
@@ -12,17 +12,9 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Test message
-    const messages = [
-      {
-        role: 'system',
-        content: 'أنت مساعد ذكي متخصص في خدمة العملاء. تحدث باللغة العربية.'
-      },
-      {
-        role: 'user',
-        content: 'مرحبا، كيف يمكنني مساعدتك اليوم؟'
-      }
-    ]
+    // Test prompt and message using DeepSeek format
+    const testPrompt = 'أنت مساعد ذكي متخصص في خدمة العملاء. تحدث باللغة العربية بطريقة مهذبة ومساعدة.'
+    const testMessage = 'مرحبا، كيف يمكنني مساعدتك اليوم؟'
 
     const aiResponse = await fetch(chuteAIUrl, {
       method: 'POST',
@@ -31,8 +23,13 @@ export async function GET(request: NextRequest) {
         'Authorization': `Bearer ${chuteAIApiKey}`
       },
       body: JSON.stringify({
-        model: process.env.CHUTES_AI_MODEL || 'gpt-3.5-turbo',
-        messages: messages,
+        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${testPrompt}\n\nCustomer: ${testMessage}`
+          }
+        ],
         max_tokens: 150,
         temperature: 0.7,
         stream: false
@@ -83,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-    const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://api.chutes.ai/v1/chat/completions'
+    const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
 
     if (!chuteAIApiKey) {
       return NextResponse.json({
@@ -92,16 +89,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const messages = [
-      {
-        role: 'system',
-        content: 'أنت مساعد ذكي متخصص في خدمة العملاء. تحدث باللغة العربية بطريقة مهذبة ومساعدة.'
-      },
-      {
-        role: 'user',
-        content: message
-      }
-    ]
+    const promptContext = 'أنت مساعد ذكي متخصص في خدمة العملاء. تحدث باللغة العربية بطريقة مهذبة ومساعدة.'
 
     const aiResponse = await fetch(chuteAIUrl, {
       method: 'POST',
@@ -110,8 +98,13 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${chuteAIApiKey}`
       },
       body: JSON.stringify({
-        model: process.env.CHUTES_AI_MODEL || 'gpt-3.5-turbo',
-        messages: messages,
+        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        messages: [
+          {
+            role: 'user',
+            content: `${promptContext}\n\nCustomer: ${message}`
+          }
+        ],
         max_tokens: 300,
         temperature: 0.7,
         stream: false
