@@ -71,22 +71,52 @@ export async function POST(
     
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 5. Check subscription
+    // 5. Check subscription limits with detailed responses
     const subscription = Array.isArray(merchant.subscription) 
       ? merchant.subscription[0] 
       : merchant.subscription
 
     if (subscription) {
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
+        console.log('❌ Subscription not active:', subscription.status)
         return NextResponse.json({
-          response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.'
-        })
+          error: 'subscription_inactive',
+          response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.',
+          redirectTo: `/chat/${chatbotId}/limit-reached`
+        }, { status: 403 })
       }
 
       if (subscription.messagesUsed >= subscription.messagesLimit) {
-        return NextResponse.json({
-          response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.'
+        console.log('❌ Message limit reached:', {
+          used: subscription.messagesUsed,
+          limit: subscription.messagesLimit
         })
+        return NextResponse.json({
+          error: 'limit_reached',
+          response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
+          redirectTo: `/chat/${chatbotId}/limit-reached`,
+          usage: {
+            used: subscription.messagesUsed,
+            limit: subscription.messagesLimit,
+            percentage: Math.round((subscription.messagesUsed / subscription.messagesLimit) * 100)
+          }
+        }, { status: 403 })
+      }
+
+      // Log usage for monitoring
+      const usagePercentage = Math.round((subscription.messagesUsed / subscription.messagesLimit) * 100)
+      console.log('📊 Current usage:', {
+        used: subscription.messagesUsed,
+        limit: subscription.messagesLimit,
+        percentage: usagePercentage,
+        remaining: subscription.messagesLimit - subscription.messagesUsed
+      })
+      
+      // Warning when approaching limit
+      if (usagePercentage >= 90) {
+        console.log('⚠️ HIGH USAGE WARNING: Near message limit!')
+      } else if (usagePercentage >= 75) {
+        console.log('⚠️ MEDIUM USAGE WARNING: 75% of messages used')
       }
     }
 

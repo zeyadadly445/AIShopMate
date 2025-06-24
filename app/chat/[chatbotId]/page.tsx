@@ -210,7 +210,46 @@ export default function ChatPage({ params }: ChatPageProps) {
         }),
       })
 
+      // Handle API response
       if (!response.ok) {
+        if (response.status === 403) {
+          // Handle subscription limits
+          try {
+            const errorData = await response.json()
+            console.log('❌ Subscription limit error:', errorData)
+            
+            if (errorData.redirectTo) {
+              // Redirect to limit reached page
+              console.log('🔄 Redirecting to:', errorData.redirectTo)
+              window.location.href = errorData.redirectTo
+              return
+            }
+            
+            // Show error message in chat
+            const errorMessage: Message = {
+              id: `error_${Date.now()}`,
+              role: 'assistant',
+              content: errorData.response || 'عذراً، تم الوصول للحد المسموح من الرسائل.',
+              timestamp: new Date()
+            }
+            setMessages(prev => [...prev, errorMessage])
+          } catch (parseError) {
+            console.error('Error parsing 403 response:', parseError)
+            const errorMessage: Message = {
+              id: `error_${Date.now()}`,
+              role: 'assistant',
+              content: 'عذراً، تم الوصول للحد المسموح من الرسائل.',
+              timestamp: new Date()
+            }
+            setMessages(prev => [...prev, errorMessage])
+          }
+          
+          setIsLoading(false)
+          setIsStreaming(false)
+          setStreamingMessage('')
+          return
+        }
+        
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
