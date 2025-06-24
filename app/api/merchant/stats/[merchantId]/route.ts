@@ -98,7 +98,7 @@ export async function GET(
       },
       systemStatus: status,
       warning: warning,
-      chatbotUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://aishopmate.vercel.app'}/chat/${merchant.chatbotId}`
+      chatbotUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://ai-shop-mate.vercel.app'}/chat/${merchant.chatbotId}`
     })
 
   } catch (error) {

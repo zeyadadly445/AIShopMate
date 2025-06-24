@@ -326,12 +326,12 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
               <input
                 type="text"
-                value={stats.chatbotUrl}
+                value={`${typeof window !== 'undefined' ? window.location.origin : 'https://ai-shop-mate.vercel.app'}/chat/${stats.merchant.chatbotId}`}
                 readOnly
                 className="flex-1 p-2 border border-gray-300 rounded text-sm"
               />
               <button
-                onClick={() => navigator.clipboard.writeText(stats.chatbotUrl)}
+                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/chat/${stats.merchant.chatbotId}`)}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
               >
                 نسخ
@@ -384,7 +384,7 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 mb-2">3. اختبار الشات بوت</h3>
               <p className="text-gray-600 text-sm mb-3">جرب الشات بوت للتأكد من عمله بالشكل المطلوب</p>
               <a
-                href={stats.chatbotUrl}
+                href={`${window.location.origin}/chat/${stats.merchant.chatbotId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`inline-block px-4 py-2 rounded text-sm ${
@@ -402,7 +402,7 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 mb-2">4. مشاركة الرابط</h3>
               <p className="text-gray-600 text-sm mb-3">ضع الرابط في بايو Instagram، TikTok، وبقية حساباتك</p>
               <button
-                onClick={() => navigator.clipboard.writeText(stats.chatbotUrl)}
+                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/chat/${stats.merchant.chatbotId}`)}
                 className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 text-sm"
               >
                 نسخ الرابط
