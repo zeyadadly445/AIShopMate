@@ -71,7 +71,9 @@ export async function POST(
     }
 
     // 2. Check subscription limits
-    const subscription = merchant.subscription
+    const subscription = Array.isArray(merchant.subscription) 
+      ? merchant.subscription[0] 
+      : merchant.subscription
 
     if (subscription) {
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
@@ -92,64 +94,57 @@ export async function POST(
     // 3. Find or create conversation
     let conversationId = null
     
-    const existingConversation = await db.conversation.findFirst({
-      where: {
-        merchantId: merchant.id,
-        sessionId: sessionId
-      },
-      select: { id: true }
-    })
+    const { data: existingConversation } = await supabaseAdmin
+      .from('Conversation')
+      .select('id')
+      .eq('merchantId', merchant.id)
+      .eq('sessionId', sessionId)
+      .single()
 
     if (existingConversation) {
       conversationId = existingConversation.id
     } else {
-      try {
-        const newConversation = await db.conversation.create({
-          data: {
-            merchantId: merchant.id,
-            sessionId: sessionId
-          },
-          select: { id: true }
+      const { data: newConversation, error: convError } = await supabaseAdmin
+        .from('Conversation')
+        .insert({
+          merchantId: merchant.id,
+          sessionId: sessionId
         })
-        conversationId = newConversation.id
-      } catch (convError) {
+        .select('id')
+        .single()
+
+      if (convError) {
         console.error('Error creating conversation:', convError)
         return NextResponse.json(
           { error: 'Failed to create conversation' },
           { status: 500 }
         )
       }
+      conversationId = newConversation.id
     }
 
     // 4. Store user message
-    try {
-      await db.message.create({
-        data: {
-          conversationId,
-          role: 'USER',
-          content: message
-        }
+    const { error: userMessageError } = await supabaseAdmin
+      .from('Message')
+      .insert({
+        conversationId,
+        role: 'USER',
+        content: message
       })
-    } catch (userMessageError) {
+
+    if (userMessageError) {
       console.error('Error storing user message:', userMessageError)
     }
 
     // 5. Get conversation history
-    let conversationHistoryFromDB: any[] = []
-    try {
-      conversationHistoryFromDB = await db.message.findMany({
-        where: { conversationId },
-        select: {
-          role: true,
-          content: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: 'asc' },
-        take: 20 // Get last 20 messages
-      })
-    } catch (historyError) {
-      console.error('Error fetching conversation history:', historyError)
-    }
+    const { data: messageHistory } = await supabaseAdmin
+      .from('Message')
+      .select('role, content, createdAt')
+      .eq('conversationId', conversationId)
+      .order('createdAt', { ascending: true })
+      .limit(20)
+
+    const conversationHistoryFromDB = messageHistory || []
 
     // 6. Prepare context for AI
     const businessContext = `
@@ -182,14 +177,14 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
         
         // Update message usage count before streaming
         if (subscription) {
-          try {
-            await db.subscription.update({
-              where: { merchantId: merchant.id },
-              data: { 
-                messagesUsed: subscription.messagesUsed + 1 
-              }
+          const { error: updateError } = await supabaseAdmin
+            .from('Subscription')
+            .update({ 
+              messagesUsed: subscription.messagesUsed + 1 
             })
-          } catch (updateError) {
+            .eq('merchantId', merchant.id)
+
+          if (updateError) {
             console.error('Error updating message count:', updateError)
           }
         }
@@ -222,28 +217,28 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
       }
 
       // 8. Store AI response (for non-streaming only)
-      try {
-        await db.message.create({
-          data: {
-            conversationId,
-            role: 'ASSISTANT',
-            content: aiResponse
-          }
+      const { error: aiMessageError } = await supabaseAdmin
+        .from('Message')
+        .insert({
+          conversationId,
+          role: 'ASSISTANT',
+          content: aiResponse
         })
-      } catch (aiMessageError) {
+
+      if (aiMessageError) {
         console.error('Error storing AI message:', aiMessageError)
       }
 
       // 9. Update message usage count
       if (subscription) {
-        try {
-          await db.subscription.update({
-            where: { merchantId: merchant.id },
-            data: { 
-              messagesUsed: subscription.messagesUsed + 1 
-            }
+        const { error: updateError } = await supabaseAdmin
+          .from('Subscription')
+          .update({ 
+            messagesUsed: subscription.messagesUsed + 1 
           })
-        } catch (updateError) {
+          .eq('merchantId', merchant.id)
+
+        if (updateError) {
           console.error('Error updating message count:', updateError)
         }
       }
