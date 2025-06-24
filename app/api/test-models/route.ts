@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     const result = {
       model,
       status: 'unknown',
-      error: null,
-      response: null,
+      error: null as string | null,
+      response: null as string | null,
       timing: 0
     }
 
