@@ -5,7 +5,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ chatbotId: string }> }
 ) {
-  console.log('🚀 Chat API with AI Integration Started')
+  console.log('🚀 Chat API with Local Storage (No DB Conversations)')
   
   try {
     // 1. Get chatbotId
@@ -14,23 +14,24 @@ export async function POST(
     
     // 2. Parse request body
     const body = await request.json()
-    const { message, sessionId, stream = true } = body
+    const { message, sessionId, conversationHistory = [], stream = true } = body
     console.log('📥 Request:', { 
       hasMessage: !!message, 
       hasSessionId: !!sessionId, 
       stream,
-      messageLength: message?.length 
+      messageLength: message?.length,
+      historyLength: conversationHistory?.length
     })
 
     // 3. Validate required fields
-    if (!chatbotId || !message || !sessionId) {
+    if (!chatbotId || !message) {
       console.error('❌ Missing required fields')
       return NextResponse.json({
-        error: 'Missing required fields: chatbotId, message, sessionId'
+        error: 'Missing required fields: chatbotId, message'
       }, { status: 400 })
     }
 
-    // 4. Get merchant data
+    // 4. Get merchant data (for business context only)
     console.log('🔍 Getting merchant data...')
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
@@ -77,70 +78,23 @@ export async function POST(
       }
     }
 
-    // 6. Handle conversation
-    console.log('💬 Managing conversation...')
-    let conversationId = null
+    // 6. Prepare AI context with conversation history from frontend
+    console.log('🤖 Preparing AI context with local conversation history...')
+    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة وقدم ردود مفصلة ومساعدة.`
     
-    const { data: existingConv } = await supabaseAdmin
-      .from('Conversation')
-      .select('id')
-      .eq('merchantId', merchant.id)
-      .eq('sessionId', sessionId)
-      .maybeSingle()
+    // Use conversation history sent from frontend (last 20 messages)
+    const recentHistory = conversationHistory?.slice(-20) || []
+    console.log(`📜 Using ${recentHistory.length} messages from local history`)
 
-    if (existingConv) {
-      conversationId = existingConv.id
-      console.log('✅ Found existing conversation')
-    } else {
-      const { data: newConv, error: convError } = await supabaseAdmin
-        .from('Conversation')
-        .insert({
-          merchantId: merchant.id,
-          sessionId: sessionId
-        })
-        .select('id')
-        .single()
-
-      if (convError) {
-        console.error('❌ Error creating conversation:', convError)
-        throw new Error('Failed to create conversation')
-      }
-      
-      conversationId = newConv.id
-      console.log('✅ Created new conversation')
-    }
-
-    // 7. Store user message
-    await supabaseAdmin
-      .from('Message')
-      .insert({
-        conversationId,
-        role: 'USER',
-        content: message
-      })
-    console.log('✅ User message stored')
-
-    // 8. Generate AI response
-    console.log('🤖 Generating AI response...')
-    const context = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بطريقة مهذبة ومفيدة وقدم ردود مفصلة ومساعدة.`
-
+    // 7. Generate AI response
     if (stream) {
-      // Return streaming response
-      return await generateStreamingResponse(message, context, conversationId, subscription, merchant)
+      // Return streaming response (no database saving)
+      return await generateStreamingResponse(message, businessContext, recentHistory, subscription, merchant)
     } else {
-      // Return regular response
-      const aiResponse = await generateRegularResponse(message, context)
-      
-      // Store AI response
-      await supabaseAdmin
-        .from('Message')
-        .insert({
-          conversationId,
-          role: 'ASSISTANT',
-          content: aiResponse
-        })
+      // Return regular response (no database saving)
+      const aiResponse = await generateRegularResponse(message, businessContext, recentHistory)
 
-      // Update message count
+      // Update message count only (no conversation saving)
       if (subscription) {
         await supabaseAdmin
           .from('Subscription')
@@ -162,15 +116,15 @@ export async function POST(
   }
 }
 
-// Streaming response with Environment Variables
+// Streaming response with Local Storage (No DB saving)
 async function generateStreamingResponse(
   message: string, 
   context: string, 
-  conversationId: string,
+  conversationHistory: any[],
   subscription: any,
   merchant: any
 ): Promise<Response> {
-  console.log('🌊 Starting streaming response with ENV variables...')
+  console.log('🌊 Starting streaming response (Local Storage Mode)...')
 
   // Use Environment Variables from Vercel
   const apiKey = process.env.CHUTES_AI_API_KEY
@@ -180,13 +134,25 @@ async function generateStreamingResponse(
   console.log('🔑 Using ENV:', {
     hasApiKey: !!apiKey,
     apiUrl,
-    model
+    model,
+    historyLength: conversationHistory?.length
   })
 
   if (!apiKey) {
     console.error('❌ CHUTES_AI_API_KEY not found in environment variables')
     throw new Error('AI API key not configured')
   }
+
+  // Build conversation context from local history
+  let conversationContext = ''
+  if (conversationHistory && conversationHistory.length > 0) {
+    conversationContext = '\n\nمحادثة سابقة:\n' + 
+      conversationHistory.map((msg: any) => 
+        `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
+      ).join('\n')
+  }
+
+  const fullContext = context + conversationContext
 
   try {
     const response = await fetch(apiUrl, {
@@ -198,7 +164,7 @@ async function generateStreamingResponse(
       body: JSON.stringify({
         model: model,
         messages: [
-          { role: "user", content: `${context}\n\nالعميل: ${message}` }
+          { role: "user", content: `${fullContext}\n\nالعميل: ${message}` }
         ],
         stream: true,
         max_tokens: 128000, // 128K tokens as requested
@@ -214,7 +180,7 @@ async function generateStreamingResponse(
       throw new Error(`AI API error: ${response.status}`)
     }
 
-    // Create streaming response
+    // Create streaming response (no database saving)
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader()
@@ -231,25 +197,15 @@ async function generateStreamingResponse(
             const { done, value } = await reader.read()
             
             if (done) {
-              console.log('✅ Stream completed, saving to database...')
+              console.log('✅ Stream completed (Local Storage Mode - No DB saving)')
               
-              // Save complete response to database
-              if (accumulatedContent.trim()) {
+              // Update message count only (no conversation saving)
+              if (subscription && accumulatedContent.trim()) {
                 await supabaseAdmin
-                  .from('Message')
-                  .insert({
-                    conversationId,
-                    role: 'ASSISTANT',
-                    content: accumulatedContent.trim()
-                  })
-                
-                // Update message count
-                if (subscription) {
-                  await supabaseAdmin
-                    .from('Subscription')
-                    .update({ messagesUsed: subscription.messagesUsed + 1 })
-                    .eq('merchantId', merchant.id)
-                }
+                  .from('Subscription')
+                  .update({ messagesUsed: subscription.messagesUsed + 1 })
+                  .eq('merchantId', merchant.id)
+                console.log('📊 Message count updated')
               }
               
               controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
@@ -273,7 +229,7 @@ async function generateStreamingResponse(
                   if (content) {
                     accumulatedContent += content
                     
-                    // Send chunk to client
+                    // Send chunk to client (will be saved in localStorage by frontend)
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
                       content: content,
                       delta: content
@@ -309,9 +265,9 @@ async function generateStreamingResponse(
   }
 }
 
-// Regular response with Environment Variables
-async function generateRegularResponse(message: string, context: string): Promise<string> {
-  console.log('📝 Generating regular response with ENV variables...')
+// Regular response with Local Storage (No DB saving)
+async function generateRegularResponse(message: string, context: string, conversationHistory: any[]): Promise<string> {
+  console.log('📝 Generating regular response (Local Storage Mode)...')
 
   // Use Environment Variables from Vercel
   const apiKey = process.env.CHUTES_AI_API_KEY
@@ -323,6 +279,17 @@ async function generateRegularResponse(message: string, context: string): Promis
     return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
   }
 
+  // Build conversation context from local history
+  let conversationContext = ''
+  if (conversationHistory && conversationHistory.length > 0) {
+    conversationContext = '\n\nمحادثة سابقة:\n' + 
+      conversationHistory.map((msg: any) => 
+        `${msg.role === 'user' ? 'العميل' : 'المساعد'}: ${msg.content}`
+      ).join('\n')
+  }
+
+  const fullContext = context + conversationContext
+
   try {
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -333,7 +300,7 @@ async function generateRegularResponse(message: string, context: string): Promis
       body: JSON.stringify({
         model: model,
         messages: [
-          { role: "user", content: `${context}\n\nالعميل: ${message}` }
+          { role: "user", content: `${fullContext}\n\nالعميل: ${message}` }
         ],
         stream: false,
         max_tokens: 128000, // 128K tokens as requested
@@ -350,7 +317,7 @@ async function generateRegularResponse(message: string, context: string): Promis
     }
 
     const data = await response.json()
-    console.log("✅ AI Response received")
+    console.log("✅ AI Response received (Local Storage Mode)")
     
     if (data.choices?.[0]?.message?.content) {
       let aiResponse = data.choices[0].message.content.trim()

@@ -81,7 +81,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 timestamp: new Date(msg.timestamp)
               }))
               setMessages(parsedMessages)
-              console.log('📱 Restored', parsedMessages.length, 'messages from local storage')
+              console.log('📱 Restored', parsedMessages.length, 'messages from localStorage')
             } catch (error) {
               console.error('Error parsing saved messages:', error)
               // Start fresh if saved data is corrupted
@@ -118,11 +118,11 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && chatbotId) {
       localStorage.setItem(storageKey, JSON.stringify(messages))
-      console.log('💾 Saved', messages.length, 'messages to local storage')
+      console.log('💾 Saved', messages.length, 'messages to localStorage')
     }
-  }, [messages, storageKey])
+  }, [messages, storageKey, chatbotId])
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -148,9 +148,18 @@ export default function ChatPage({ params }: ChatPageProps) {
     setStreamingMessage('')
 
     try {
-      console.log('🌊 Starting streaming chat with:', chatbotId, sessionId)
+      console.log('🌊 Starting streaming chat with conversation history...')
 
-      // Use the enhanced streaming endpoint
+      // Prepare conversation history for AI context (last 20 messages excluding current user message)
+      const conversationHistory = updatedMessages.slice(-21, -1).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString()
+      }))
+
+      console.log('📤 Sending with', conversationHistory.length, 'context messages')
+
+      // Use the main chat endpoint with conversation history
       const response = await fetch(`/api/chat/${chatbotId}`, {
         method: 'POST',
         headers: {
@@ -159,6 +168,7 @@ export default function ChatPage({ params }: ChatPageProps) {
         body: JSON.stringify({
           message: userMessage.content,
           sessionId: sessionId,
+          conversationHistory: conversationHistory, // Send conversation history
           stream: true
         }),
       })
@@ -195,7 +205,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             if (data === '[DONE]') {
               console.log('🏁 Stream finished signal received')
               
-              // Add the complete message to messages array
+              // Add the complete message to messages array (will be saved to localStorage automatically)
               if (accumulatedMessage.trim()) {
                 const assistantMessage: Message = {
                   id: `assistant_${Date.now()}`,
@@ -204,7 +214,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                   timestamp: new Date()
                 }
                 setMessages(prev => [...prev, assistantMessage])
-                console.log('✅ Complete AI response saved:', accumulatedMessage.length, 'characters')
+                console.log('✅ Complete AI response saved to localStorage:', accumulatedMessage.length, 'characters')
               }
               
               setStreamingMessage('')
@@ -249,23 +259,6 @@ export default function ChatPage({ params }: ChatPageProps) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
-    }
-  }
-
-  const clearChatHistory = () => {
-    if (confirm('هل تريد مسح جميع الرسائل؟ هذا الإجراء لا يمكن التراجع عنه.')) {
-      localStorage.removeItem(storageKey)
-      // Reset to welcome message only
-      if (merchant) {
-        const welcomeMsg: Message = {
-          id: `welcome_${Date.now()}`,
-          role: 'assistant',
-          content: merchant.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
-          timestamp: new Date()
-        }
-        setMessages([welcomeMsg])
-        console.log('🗑️ Chat history cleared')
-      }
     }
   }
 
@@ -326,15 +319,6 @@ export default function ChatPage({ params }: ChatPageProps) {
             </div>
             <div className="flex-1"></div>
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
-              <button
-                onClick={clearChatHistory}
-                className="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                title="مسح المحادثة"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
                 <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
