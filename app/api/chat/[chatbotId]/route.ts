@@ -146,34 +146,22 @@ export async function POST(
 
     const conversationHistoryFromDB = messageHistory || []
 
-    // 6. Prepare context for AI
-    const businessContext = `
-أنت مساعد ذكي لمتجر "${merchant.businessName}".
+    // 6. Prepare simplified context for AI (to avoid complexity issues)
+    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بشكل مفصل ومفيد.
 
 معلومات المتجر:
 ${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) => 
-  `- ${ds.type}: ${ds.title} (${ds.url})`
-).join('\n') || 'لا توجد مصادر بيانات متاحة'}
+  `- ${ds.type}: ${ds.title}`
+).join('\n') || 'متجر للمنتجات والخدمات'}
 
-تعليمات مهمة:
-1. تحدث باللغة العربية دائماً
-2. كن مهذباً ومساعداً
-3. ركز على منتجات وخدمات المتجر
-4. إذا لم تجد إجابة محددة، اطلب من العميل التواصل مع المتجر مباشرة
-5. لا تتحدث عن متاجر أخرى أو منافسين
-6. احتفظ بالطابع المهني والودود
+كن مهذباً ومساعداً وركز على خدمات المتجر.`
 
-محادثة سابقة:
-${conversationHistoryFromDB.slice(-10).map((msg: any) => 
-  `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
-).join('\n')}
-`
-
-    // 7. Generate AI response using Chutes AI with streaming support
+    // 7. Generate AI response using enhanced streaming
     if (stream) {
       // For streaming, we return the stream directly
       try {
-        const streamResponse = await generateAIStreamResponse(message, businessContext, conversationHistoryFromDB)
+        console.log('🌊 Starting enhanced streaming response...')
+        const streamResponse = await generateEnhancedAIStreamResponse(message, businessContext, conversationHistoryFromDB, merchant, conversationId)
         
         // Update message usage count before streaming
         if (subscription) {
@@ -195,7 +183,7 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
         console.error('AI streaming error:', aiError)
         return NextResponse.json({
           error: 'AI service unavailable',
-          fallback: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
+          response: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
         }, { status: 500 })
       }
     } else {
@@ -207,12 +195,6 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
         
       } catch (aiError) {
         console.error('AI response error:', aiError)
-        console.error('AI error details:', {
-          message: aiError instanceof Error ? aiError.message : aiError,
-          stack: aiError instanceof Error ? aiError.stack : undefined,
-          chatbotId,
-          userMessage: message.substring(0, 100) // Only log first 100 chars for privacy
-        })
         aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
       }
 
@@ -246,15 +228,8 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
       return NextResponse.json({ response: aiResponse })
     }
 
-
-
   } catch (error) {
     console.error('Error in chat endpoint:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString()
-    })
     
     return NextResponse.json(
       { 
@@ -266,54 +241,32 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
   }
 }
 
-// Calculate dynamic max tokens based on context complexity
+// Calculate enhanced max tokens
 function calculateMaxTokens(userMessage: string, conversationHistory: any[], context: string): number {
-  const baseTokens = 1000
+  const baseTokens = 5000
   const messageLength = userMessage.length
   const historyLength = conversationHistory.length
   const contextLength = context.length
   
-  // Calculate tokens based on content complexity
   let calculatedTokens = baseTokens
+  calculatedTokens += Math.min(messageLength * 3, 20000)
+  calculatedTokens += Math.min(historyLength * 300, 10000)
+  calculatedTokens += Math.min(contextLength / 5, 10000)
   
-  // Add tokens based on message length
-  calculatedTokens += Math.min(messageLength * 2, 10000)
-  
-  // Add tokens based on conversation history
-  calculatedTokens += Math.min(historyLength * 200, 5000)
-  
-  // Add tokens based on context complexity
-  calculatedTokens += Math.min(contextLength / 10, 5000)
-  
-  // Ensure we don't exceed the maximum limit
-  return Math.min(calculatedTokens, 60000)
+  // Enhanced limit: up to 128K tokens
+  return Math.min(calculatedTokens, 128000)
 }
 
-// AI response generator using Chutes AI API with DeepSeek V3 (non-streaming)
+// Enhanced AI response generator (non-streaming)
 async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
   const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
+  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
 
   if (!chuteAIApiKey) {
     console.warn('CHUTES_AI_API_KEY not found, using fallback response')
     return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
   }
 
-  // Build conversation history for context
-  let conversationContext = ''
-  const recentHistory = conversationHistory.slice(-10)
-  
-  if (recentHistory.length > 0) {
-    conversationContext = '\n\nمحادثة سابقة:\n' + 
-      recentHistory.map((msg: any) => 
-        `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
-      ).join('\n')
-  }
-
-  // Prepare the prompt with context and message format required by DeepSeek
-  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- قدم إجابة شاملة ومفيدة\n- لا تذكر أنك مساعد ذكي'
-
-  // Calculate dynamic max tokens
   const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
 
   try {
@@ -324,11 +277,11 @@ async function generateAIResponse(userMessage: string, context: string, conversa
         'Authorization': `Bearer ${chuteAIApiKey}`
       },
       body: JSON.stringify({
-        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        model: 'deepseek-ai/DeepSeek-V3-0324',
         messages: [
           {
             role: 'user',
-            content: `${fullPrompt}\n\nCustomer: ${userMessage}`
+            content: `${context}\n\nالعميل: ${userMessage}`
           }
         ],
         max_tokens: maxTokens,
@@ -348,7 +301,7 @@ async function generateAIResponse(userMessage: string, context: string, conversa
     if (data.choices && data.choices[0] && data.choices[0].message) {
       let aiResponse = data.choices[0].message.content.trim()
       
-      // Clean up the response if it starts with common prefixes
+      // Clean up the response
       aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
       
       return aiResponse || 'شكراً لك على تواصلك معنا. كيف يمكنني مساعدتك؟'
@@ -359,42 +312,28 @@ async function generateAIResponse(userMessage: string, context: string, conversa
 
   } catch (error) {
     console.error('Error calling Chutes AI API:', error)
-    console.error('AI API error details:', {
-      message: error instanceof Error ? error.message : error,
-      url: chuteAIUrl,
-      hasApiKey: !!chuteAIApiKey,
-      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
-      maxTokens
-    })
     throw error
   }
 }
 
-// AI streaming response generator using Chutes AI API with DeepSeek V3
-async function generateAIStreamResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<Response> {
+// ENHANCED streaming response generator with 128K tokens support
+async function generateEnhancedAIStreamResponse(
+  userMessage: string, 
+  context: string, 
+  conversationHistory: any[],
+  merchant: any,
+  conversationId: string
+): Promise<Response> {
   const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = process.env.CHUTES_AI_API_URL || 'https://llm.chutes.ai/v1/chat/completions'
+  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
 
   if (!chuteAIApiKey) {
     throw new Error('CHUTES_AI_API_KEY not configured')
   }
 
-  // Build conversation history for context
-  let conversationContext = ''
-  const recentHistory = conversationHistory.slice(-10)
-  
-  if (recentHistory.length > 0) {
-    conversationContext = '\n\nمحادثة سابقة:\n' + 
-      recentHistory.map((msg: any) => 
-        `${msg.role === 'USER' ? 'العميل' : 'المساعد'}: ${msg.content}`
-      ).join('\n')
-  }
-
-  // Prepare the prompt with context and message format required by DeepSeek
-  const fullPrompt = context + conversationContext + '\n\nتعليمات إضافية:\n- رد بطريقة طبيعية ومساعدة\n- قدم إجابة شاملة ومفيدة\n- لا تذكر أنك مساعد ذكي'
-
-  // Calculate dynamic max tokens
   const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
+
+  console.log('🚀 Enhanced streaming with:', { maxTokens, model: 'DeepSeek-V3-0324' })
 
   try {
     const response = await fetch(chuteAIUrl, {
@@ -404,11 +343,11 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
         'Authorization': `Bearer ${chuteAIApiKey}`
       },
       body: JSON.stringify({
-        model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+        model: 'deepseek-ai/DeepSeek-V3-0324',
         messages: [
           {
             role: 'user',
-            content: `${fullPrompt}\n\nCustomer: ${userMessage}`
+            content: `${context}\n\nالعميل: ${userMessage}`
           }
         ],
         max_tokens: maxTokens,
@@ -423,7 +362,7 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
       throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
     }
 
-    // Create a new streaming response
+    // Create enhanced streaming response
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader()
@@ -440,8 +379,22 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
             const { done, value } = await reader.read()
             
             if (done) {
-              // Store the complete accumulated response in database
-              // Note: This would need to be implemented with proper context passing
+              console.log('✅ Stream completed, saving to database...')
+              
+              // Store the complete response in database
+              if (accumulatedResponse.trim()) {
+                await supabaseAdmin
+                  .from('Message')
+                  .insert({
+                    conversationId,
+                    role: 'ASSISTANT',
+                    content: accumulatedResponse.trim()
+                  })
+              }
+              
+              // Send completion signal
+              controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
+              controller.close()
               break
             }
 
@@ -450,7 +403,7 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
 
             for (const line of lines) {
               if (line.startsWith('data: ')) {
-                const data = line.slice(6)
+                const data = line.slice(6).trim()
                 
                 if (data === '[DONE]') {
                   continue
@@ -462,13 +415,14 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
                   
                   if (content) {
                     accumulatedResponse += content
-                    // Clean up the content if it starts with common prefixes
+                    
+                    // Clean up content for first few characters
                     let cleanContent = content
                     if (accumulatedResponse.length < 50) {
                       cleanContent = content.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
                     }
                     
-                    // Send the chunk to the client
+                    // Send the chunk immediately to client
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
                       content: cleanContent,
                       delta: cleanContent
@@ -480,10 +434,6 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
               }
             }
           }
-
-          // Send completion signal
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
-          controller.close()
 
         } catch (error) {
           console.error('Streaming error:', error)
@@ -499,19 +449,13 @@ async function generateAIStreamResponse(userMessage: string, context: string, co
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'X-Accel-Buffering': 'no'
       }
     })
 
   } catch (error) {
-    console.error('Error calling Chutes AI streaming API:', error)
-    console.error('AI streaming API error details:', {
-      message: error instanceof Error ? error.message : error,
-      url: chuteAIUrl,
-      hasApiKey: !!chuteAIApiKey,
-      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
-      maxTokens
-    })
+    console.error('Error calling enhanced Chutes AI streaming API:', error)
     throw error
   }
 } 
