@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDatabase } from '@/lib/database-fallback'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(
   request: NextRequest,
@@ -34,47 +34,39 @@ export async function POST(
     }
 
     // 1. Fetch merchant data
-    const db = await getDatabase()
-    
-    let merchant
-    try {
-      merchant = await db.merchant.findUnique({
-        where: { chatbotId },
-        include: {
-          subscription: {
-            select: {
-              messagesLimit: true,
-              messagesUsed: true,
-              status: true
-            }
-          },
-          dataSources: {
-            select: {
-              type: true,
-              title: true,
-              url: true,
-              isActive: true
-            }
-          }
-        }
-      })
-    } catch (dbError) {
-      console.error('Database query failed:', dbError)
-      return NextResponse.json({ 
-        error: 'Database connection failed',
-        details: 'Unable to connect to database'
-      }, { status: 500 })
-    }
+    const { data: merchant, error: merchantError } = await supabaseAdmin
+      .from('Merchant')
+      .select(`
+        id,
+        businessName,
+        welcomeMessage,
+        primaryColor,
+        subscription:Subscription(
+          messagesLimit,
+          messagesUsed,
+          status
+        ),
+        dataSources:MerchantDataSource(
+          type,
+          title,
+          url,
+          isActive
+        )
+      `)
+      .eq('chatbotId', chatbotId)
+      .single()
 
-    if (!merchant) {
+    if (merchantError || !merchant) {
       console.error('Merchant lookup failed:', {
         chatbotId,
+        error: merchantError?.message,
+        errorCode: merchantError?.code,
         foundMerchant: !!merchant
       })
       return NextResponse.json({ 
         error: 'Merchant not found',
         chatbotId,
-        details: 'No merchant found with this chatbot ID'
+        details: merchantError?.message || 'No merchant found with this chatbot ID'
       }, { status: 404 })
     }
 
