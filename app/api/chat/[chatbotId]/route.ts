@@ -7,11 +7,28 @@ export async function POST(
 ) {
   try {
     const { chatbotId } = await params
-    const { message, sessionId, conversationHistory = [] } = await request.json()
+    
+    // Parse request body with error handling
+    let requestBody
+    try {
+      requestBody = await request.json()
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+
+    const { message, sessionId, conversationHistory = [] } = requestBody
 
     if (!chatbotId || !message || !sessionId) {
+      console.error('Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
       return NextResponse.json(
-        { error: 'chatbotId, message, and sessionId are required' },
+        { 
+          error: 'chatbotId, message, and sessionId are required',
+          received: { chatbotId, hasMessage: !!message, hasSessionId: !!sessionId }
+        },
         { status: 400 }
       )
     }
@@ -40,7 +57,17 @@ export async function POST(
       .single()
 
     if (merchantError || !merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 })
+      console.error('Merchant lookup failed:', {
+        chatbotId,
+        error: merchantError?.message,
+        errorCode: merchantError?.code,
+        foundMerchant: !!merchant
+      })
+      return NextResponse.json({ 
+        error: 'Merchant not found',
+        chatbotId,
+        details: merchantError?.message || 'No merchant found with this chatbot ID'
+      }, { status: 404 })
     }
 
     // 2. Check subscription limits
@@ -150,6 +177,12 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
       
     } catch (aiError) {
       console.error('AI response error:', aiError)
+      console.error('AI error details:', {
+        message: aiError instanceof Error ? aiError.message : aiError,
+        stack: aiError instanceof Error ? aiError.stack : undefined,
+        chatbotId,
+        userMessage: message.substring(0, 100) // Only log first 100 chars for privacy
+      })
       aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
     }
 
@@ -184,8 +217,17 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
 
   } catch (error) {
     console.error('Error in chat endpoint:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
@@ -258,6 +300,12 @@ async function generateAIResponse(userMessage: string, context: string, conversa
 
   } catch (error) {
     console.error('Error calling Chutes AI API:', error)
+    console.error('AI API error details:', {
+      message: error instanceof Error ? error.message : error,
+      url: chuteAIUrl,
+      hasApiKey: !!chuteAIApiKey,
+      model: process.env.CHUTES_AI_MODEL || 'deepseek-ai/DeepSeek-V3-0324'
+    })
     throw error
   }
 } 
