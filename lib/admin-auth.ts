@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
-// بيانات المدير المشفرة (يجب تغييرها في الإنتاج)
+// بيانات المدير من متغيرات البيئة
 const ADMIN_CREDENTIALS = {
-  username: 'admin_zeyad',
-  // كلمة مرور: Admin@2024! (مشفرة)
-  passwordHash: '$2a$12$LQv3c1yqBwlFHyO1FTlBxOzT5qHD5.Ke.c5rQHr5zVx3vJ8gK9oAy',
-  adminId: 'admin_master_2024'
+  username: process.env.ADMIN_USERNAME || 'admin_zeyad',
+  // كلمة مرور مشفرة من متغير البيئة أو default صحيح
+  passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2b$12$egnqIRrdQrahfcMxnkeEXuM6DIj9PsbVM1BTZOd.h7cDCmWFV3WpC',
+  adminId: process.env.ADMIN_ID || 'admin_master_2024'
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g4h'
