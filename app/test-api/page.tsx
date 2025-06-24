@@ -50,6 +50,18 @@ export default function TestAPIPage() {
       method: 'GET'
     },
     {
+      name: '💬 دردشة محلية (مع السياق)',
+      endpoint: '/api/chat-local/shoes',
+      data: { 
+        message: 'مرحبا، أريد شراء أحذية رياضية', 
+        conversationHistory: [
+          { role: 'assistant', content: 'مرحباً! كيف يمكنني مساعدتك اليوم؟', timestamp: new Date().toISOString() },
+          { role: 'user', content: 'ما هي الأحذية المتوفرة؟', timestamp: new Date().toISOString() },
+          { role: 'assistant', content: 'لدينا مجموعة رائعة من الأحذية الرياضية والكاجوال', timestamp: new Date().toISOString() }
+        ]
+      }
+    },
+    {
       name: '🚀 دردشة مباشرة (بدون DB)',
       endpoint: '/api/chat-direct/shoes',
       data: { message: 'مرحبا، كيف يمكنني شراء أحذية؟', sessionId: 'test-session' }
