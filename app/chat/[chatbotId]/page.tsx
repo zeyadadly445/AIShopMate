@@ -1,6 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
@@ -463,7 +467,64 @@ export default function ChatPage({ params }: ChatPageProps) {
                   backgroundColor: message.role === 'user' ? merchant.primaryColor : undefined
                 }}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'user' ? (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        // Style headings
+                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
+                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-1" {...props} />,
+                        // Style paragraphs
+                        p: ({node, ...props}) => <p className="text-gray-800 mb-2 leading-relaxed" {...props} />,
+                        // Style lists
+                        ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-gray-800" {...props} />,
+                        ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-gray-800" {...props} />,
+                        li: ({node, ...props}) => <li className="text-gray-800 mb-1" {...props} />,
+                        // Style tables
+                        table: ({node, ...props}) => (
+                          <div className="overflow-x-auto mb-3">
+                            <table className="min-w-full border-collapse border border-gray-300 text-xs" {...props} />
+                          </div>
+                        ),
+                        thead: ({node, ...props}) => <thead className="bg-gray-100" {...props} />,
+                        th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 font-bold text-gray-900 text-left" {...props} />,
+                        td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1 text-gray-800" {...props} />,
+                        // Style code blocks
+                        code: ({node, className, children, ...props}) => {
+                          const match = /language-(\w+)/.exec(className || '')
+                          return !match ? (
+                            <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-900" {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <code className="block bg-gray-100 p-2 rounded text-xs font-mono text-gray-900 overflow-x-auto" {...props}>
+                              {children}
+                            </code>
+                          )
+                        },
+                        // Style blockquotes
+                        blockquote: ({node, ...props}) => (
+                          <blockquote className="border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 text-gray-800 italic mb-2" {...props} />
+                        ),
+                        // Style horizontal rules
+                        hr: ({node, ...props}) => <hr className="border-gray-300 my-3" {...props} />,
+                        // Style links
+                        a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
+                        // Style strong/bold text
+                        strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                        // Style emphasis/italic text
+                        em: ({node, ...props}) => <em className="italic text-gray-800" {...props} />,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
                 <p className={`text-xs mt-2 ${
                   message.role === 'user' ? 'text-white/80' : 'text-gray-900'
                 }`}>
@@ -481,7 +542,60 @@ export default function ChatPage({ params }: ChatPageProps) {
           {isStreaming && streamingMessage && (
             <div className="flex justify-start">
               <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl max-w-xs sm:max-w-md lg:max-w-lg">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingMessage}</p>
+                <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      // Style headings
+                      h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-1" {...props} />,
+                      // Style paragraphs
+                      p: ({node, ...props}) => <p className="text-gray-800 mb-2 leading-relaxed" {...props} />,
+                      // Style lists
+                      ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-gray-800" {...props} />,
+                      ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-gray-800" {...props} />,
+                      li: ({node, ...props}) => <li className="text-gray-800 mb-1" {...props} />,
+                      // Style tables
+                      table: ({node, ...props}) => (
+                        <div className="overflow-x-auto mb-3">
+                          <table className="min-w-full border-collapse border border-gray-300 text-xs" {...props} />
+                        </div>
+                      ),
+                      thead: ({node, ...props}) => <thead className="bg-gray-100" {...props} />,
+                      th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 font-bold text-gray-900 text-left" {...props} />,
+                      td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1 text-gray-800" {...props} />,
+                      // Style code blocks
+                      code: ({node, className, children, ...props}) => {
+                        const match = /language-(\w+)/.exec(className || '')
+                        return !match ? (
+                          <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-900" {...props}>
+                            {children}
+                          </code>
+                        ) : (
+                          <code className="block bg-gray-100 p-2 rounded text-xs font-mono text-gray-900 overflow-x-auto" {...props}>
+                            {children}
+                          </code>
+                        )
+                      },
+                      // Style blockquotes
+                      blockquote: ({node, ...props}) => (
+                        <blockquote className="border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 text-gray-800 italic mb-2" {...props} />
+                      ),
+                      // Style horizontal rules
+                      hr: ({node, ...props}) => <hr className="border-gray-300 my-3" {...props} />,
+                      // Style links
+                      a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
+                      // Style strong/bold text
+                      strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                      // Style emphasis/italic text
+                      em: ({node, ...props}) => <em className="italic text-gray-800" {...props} />,
+                    }}
+                  >
+                    {streamingMessage}
+                  </ReactMarkdown>
+                </div>
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mt-2">
                   <div className="flex space-x-1">
                     <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
@@ -560,4 +674,4 @@ export default function ChatPage({ params }: ChatPageProps) {
       </div>
     </div>
   )
-} 
+}
