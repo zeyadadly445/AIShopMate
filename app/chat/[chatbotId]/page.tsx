@@ -1,496 +1,467 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+'use client'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ chatbotId: string }> }
-) {
-  try {
-    const { chatbotId } = await params
-    console.log('🚀 Chat API called with chatbotId:', chatbotId)
-    
-    // Parse request body with error handling
-    let requestBody
-    try {
-      requestBody = await request.json()
-      console.log('📥 Request body parsed:', { 
-        hasMessage: !!requestBody.message, 
-        hasSessionId: !!requestBody.sessionId,
-        stream: requestBody.stream 
-      })
-    } catch (parseError) {
-      console.error('❌ Error parsing request body:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
+import React, { useState, useEffect, useRef } from 'react'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import Card from '@/components/ui/Card'
+
+interface Merchant {
+  id: string
+  businessName: string
+  welcomeMessage: string
+  primaryColor: string
+  logoUrl?: string
+}
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+interface ChatPageProps {
+  params: Promise<{ chatbotId: string }>
+}
+
+export default function ChatPage({ params }: ChatPageProps) {
+  const [chatbotId, setChatbotId] = useState<string>('')
+  const [merchant, setMerchant] = useState<Merchant | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [inputMessage, setInputMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMerchant, setIsLoadingMerchant] = useState(true)
+  const [streamingMessage, setStreamingMessage] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Generate or get session ID
+  const [sessionId, setSessionId] = useState('')
+  
+  useEffect(() => {
+    // Generate a unique session ID for this browser session
+    let existingSessionId = sessionStorage.getItem('chat_session_id')
+    if (!existingSessionId) {
+      existingSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      sessionStorage.setItem('chat_session_id', existingSessionId)
     }
+    setSessionId(existingSessionId)
+  }, [])
 
-    const { message, sessionId, conversationHistory = [], stream = true } = requestBody
+  // Storage key for this specific chatbot
+  const storageKey = `chat_${chatbotId}_messages`
 
-    if (!chatbotId || !message || !sessionId) {
-      console.error('❌ Missing required fields:', { chatbotId, message: !!message, sessionId: !!sessionId })
-      return NextResponse.json(
-        { 
-          error: 'chatbotId, message, and sessionId are required',
-          received: { chatbotId, hasMessage: !!message, hasSessionId: !!sessionId }
-        },
-        { status: 400 }
-      )
+  // Resolve params and get chatbotId
+  useEffect(() => {
+    const resolveChatbotId = async () => {
+      const resolvedParams = await params
+      setChatbotId(resolvedParams.chatbotId)
     }
+    resolveChatbotId()
+  }, [params])
 
-    console.log('🔍 Looking up merchant...')
-    // 1. Fetch merchant data
-    const { data: merchant, error: merchantError } = await supabaseAdmin
-      .from('Merchant')
-      .select(`
-        id,
-        businessName,
-        welcomeMessage,
-        primaryColor,
-        subscription:Subscription(
-          messagesLimit,
-          messagesUsed,
-          status
-        ),
-        dataSources:MerchantDataSource(
-          type,
-          title,
-          url,
-          isActive
-        )
-      `)
-      .eq('chatbotId', chatbotId)
-      .single()
+  // Load merchant info and restore chat history
+  useEffect(() => {
+    if (!chatbotId) return
 
-    if (merchantError || !merchant) {
-      console.error('❌ Merchant lookup failed:', {
-        chatbotId,
-        error: merchantError?.message,
-        errorCode: merchantError?.code,
-        foundMerchant: !!merchant
-      })
-      return NextResponse.json({ 
-        error: 'Merchant not found',
-        chatbotId,
-        details: merchantError?.message || 'No merchant found with this chatbot ID'
-      }, { status: 404 })
-    }
-
-    console.log('✅ Merchant found:', merchant.businessName)
-
-    // 2. Check subscription limits
-    const subscription = Array.isArray(merchant.subscription) 
-      ? merchant.subscription[0] 
-      : merchant.subscription
-
-    if (subscription) {
-      if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
-        console.log('❌ Subscription inactive:', subscription.status)
-        return NextResponse.json(
-          { response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
-        )
-      }
-
-      if (subscription.messagesUsed >= subscription.messagesLimit) {
-        console.log('❌ Message limit exceeded:', subscription.messagesUsed, '>=', subscription.messagesLimit)
-        return NextResponse.json(
-          { response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
-        )
-      }
-    }
-
-    console.log('🔍 Finding/creating conversation...')
-    // 3. Find or create conversation
-    let conversationId = null
-    
-    const { data: existingConversation, error: convFindError } = await supabaseAdmin
-      .from('Conversation')
-      .select('id')
-      .eq('merchantId', merchant.id)
-      .eq('sessionId', sessionId)
-      .single()
-
-    if (convFindError && convFindError.code !== 'PGRST116') {
-      console.error('❌ Error finding conversation:', convFindError)
-      return NextResponse.json(
-        { error: 'Database error while finding conversation' },
-        { status: 500 }
-      )
-    }
-
-    if (existingConversation) {
-      conversationId = existingConversation.id
-      console.log('✅ Found existing conversation:', conversationId)
-    } else {
-      console.log('🆕 Creating new conversation...')
-      const { data: newConversation, error: convError } = await supabaseAdmin
-        .from('Conversation')
-        .insert({
-          merchantId: merchant.id,
-          sessionId: sessionId
-        })
-        .select('id')
-        .single()
-
-      if (convError) {
-        console.error('❌ Error creating conversation:', convError)
-        return NextResponse.json(
-          { error: 'Failed to create conversation' },
-          { status: 500 }
-        )
-      }
-      conversationId = newConversation.id
-      console.log('✅ Created new conversation:', conversationId)
-    }
-
-    console.log('💾 Storing user message...')
-    // 4. Store user message
-    const { error: userMessageError } = await supabaseAdmin
-      .from('Message')
-      .insert({
-        conversationId,
-        role: 'USER',
-        content: message
-      })
-
-    if (userMessageError) {
-      console.error('⚠️ Error storing user message:', userMessageError)
-    } else {
-      console.log('✅ User message stored')
-    }
-
-    console.log('📜 Getting conversation history...')
-    // 5. Get conversation history
-    const { data: messageHistory, error: historyError } = await supabaseAdmin
-      .from('Message')
-      .select('role, content, createdAt')
-      .eq('conversationId', conversationId)
-      .order('createdAt', { ascending: true })
-      .limit(20)
-
-    if (historyError) {
-      console.error('⚠️ Error getting message history:', historyError)
-    }
-
-    const conversationHistoryFromDB = messageHistory || []
-    console.log('📝 Got', conversationHistoryFromDB.length, 'messages from history')
-
-    // 6. Prepare simplified context for AI (to avoid complexity issues)
-    const businessContext = `أنت مساعد ذكي لمتجر "${merchant.businessName}". تحدث باللغة العربية بشكل مفصل ومفيد.
-
-معلومات المتجر:
-${merchant.dataSources?.filter((ds: any) => ds.isActive).map((ds: any) => 
-  `- ${ds.type}: ${ds.title}`
-).join('\n') || 'متجر للمنتجات والخدمات'}
-
-كن مهذباً ومساعداً وركز على خدمات المتجر.`
-
-    // 7. Generate AI response using enhanced streaming
-    if (stream) {
-      console.log('🌊 Starting enhanced streaming response...')
-      // For streaming, we return the stream directly
+    const loadMerchant = async () => {
       try {
-        const streamResponse = await generateEnhancedAIStreamResponse(message, businessContext, conversationHistoryFromDB, merchant, conversationId)
-        
-        // Update message usage count before streaming
-        if (subscription) {
-          console.log('📊 Updating message usage count...')
-          const { error: updateError } = await supabaseAdmin
-            .from('Subscription')
-            .update({ 
-              messagesUsed: subscription.messagesUsed + 1 
-            })
-            .eq('merchantId', merchant.id)
+        const response = await fetch(`/api/merchant/${chatbotId}`)
+        if (response.ok) {
+          const merchantData = await response.json()
+          setMerchant(merchantData)
+          
+          // Load saved messages from localStorage
+          const savedMessages = localStorage.getItem(storageKey)
+          
+          if (savedMessages) {
+            try {
+              const parsedMessages = JSON.parse(savedMessages).map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+              }))
+              setMessages(parsedMessages)
+              console.log('📱 Restored', parsedMessages.length, 'messages from local storage')
+            } catch (error) {
+              console.error('Error parsing saved messages:', error)
+              // Start fresh if saved data is corrupted
+              const welcomeMsg: Message = {
+                id: `welcome_${Date.now()}`,
+                role: 'assistant',
+                content: merchantData.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+                timestamp: new Date()
+              }
+              setMessages([welcomeMsg])
+            }
+          } else {
+            // No saved messages, start with welcome message
+            const welcomeMsg: Message = {
+              id: `welcome_${Date.now()}`,
+              role: 'assistant',
+              content: merchantData.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+              timestamp: new Date()
+            }
+            setMessages([welcomeMsg])
+          }
+        } else {
+          console.error('Merchant not found')
+        }
+      } catch (error) {
+        console.error('Error loading merchant:', error)
+      } finally {
+        setIsLoadingMerchant(false)
+      }
+    }
 
-          if (updateError) {
-            console.error('⚠️ Error updating message count:', updateError)
+    loadMerchant()
+  }, [chatbotId, storageKey])
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(messages))
+      console.log('💾 Saved', messages.length, 'messages to local storage')
+    }
+  }, [messages, storageKey])
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, streamingMessage])
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || isLoading || !merchant || !sessionId) return
+
+    const userMessage: Message = {
+      id: `user_${Date.now()}`,
+      role: 'user',
+      content: inputMessage.trim(),
+      timestamp: new Date()
+    }
+
+    // Add user message immediately
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    setInputMessage('')
+    setIsLoading(true)
+    setIsStreaming(true)
+    setStreamingMessage('')
+
+    try {
+      console.log('🌊 Starting streaming chat with:', chatbotId, sessionId)
+
+      // Use the enhanced streaming endpoint
+      const response = await fetch(`/api/chat/${chatbotId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          sessionId: sessionId,
+          stream: true
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedMessage = ''
+
+      if (!reader) {
+        throw new Error('No response body reader available')
+      }
+
+      console.log('🚀 Starting to read stream...')
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) {
+          console.log('✅ Stream completed')
+          break
+        }
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            
+            if (data === '[DONE]') {
+              console.log('🏁 Stream finished signal received')
+              
+              // Add the complete message to messages array
+              if (accumulatedMessage.trim()) {
+                const assistantMessage: Message = {
+                  id: `assistant_${Date.now()}`,
+                  role: 'assistant',
+                  content: accumulatedMessage.trim(),
+                  timestamp: new Date()
+                }
+                setMessages(prev => [...prev, assistantMessage])
+                console.log('✅ Complete AI response saved:', accumulatedMessage.length, 'characters')
+              }
+              
+              setStreamingMessage('')
+              setIsStreaming(false)
+              setIsLoading(false)
+              return
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.delta || parsed.content || ''
+              
+              if (content) {
+                accumulatedMessage += content
+                setStreamingMessage(accumulatedMessage)
+                console.log('📝 Streaming:', content)
+              }
+            } catch (parseError) {
+              console.error('Error parsing streaming data:', parseError)
+            }
           }
         }
-
-        return streamResponse
-        
-      } catch (aiError) {
-        console.error('❌ AI streaming error:', aiError)
-        return NextResponse.json({
-          error: 'AI service unavailable',
-          response: `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
-        }, { status: 500 })
-      }
-    } else {
-      console.log('📝 Generating non-streaming response...')
-      // Non-streaming response (fallback)
-      let aiResponse = 'شكراً لك على رسالتك. سأحيلك إلى فريق خدمة العملاء للحصول على مساعدة أفضل.'
-      
-      try {
-        aiResponse = await generateAIResponse(message, businessContext, conversationHistoryFromDB)
-        
-      } catch (aiError) {
-        console.error('❌ AI response error:', aiError)
-        aiResponse = `شكراً لاهتمامك بـ ${merchant.businessName}. للحصول على معلومات دقيقة، يرجى التواصل معنا مباشرة.`
       }
 
-      // 8. Store AI response (for non-streaming only)
-      const { error: aiMessageError } = await supabaseAdmin
-        .from('Message')
-        .insert({
-          conversationId,
-          role: 'ASSISTANT',
-          content: aiResponse
-        })
-
-      if (aiMessageError) {
-        console.error('⚠️ Error storing AI message:', aiMessageError)
+    } catch (error) {
+      console.error('Error in streaming chat:', error)
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        role: 'assistant',
+        content: 'عذراً، حدث خطأ في النظام. يرجى المحاولة مرة أخرى.',
+        timestamp: new Date()
       }
-
-      // 9. Update message usage count
-      if (subscription) {
-        const { error: updateError } = await supabaseAdmin
-          .from('Subscription')
-          .update({ 
-            messagesUsed: subscription.messagesUsed + 1 
-          })
-          .eq('merchantId', merchant.id)
-
-        if (updateError) {
-          console.error('⚠️ Error updating message count:', updateError)
-        }
-      }
-
-      return NextResponse.json({ response: aiResponse })
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+      setIsStreaming(false)
+      setStreamingMessage('')
     }
+  }
 
-  } catch (error) {
-    console.error('💥 CRITICAL ERROR in chat endpoint:', error)
-    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  const clearChatHistory = () => {
+    if (confirm('هل تريد مسح جميع الرسائل؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+      localStorage.removeItem(storageKey)
+      // Reset to welcome message only
+      if (merchant) {
+        const welcomeMsg: Message = {
+          id: `welcome_${Date.now()}`,
+          role: 'assistant',
+          content: merchant.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+          timestamp: new Date()
+        }
+        setMessages([welcomeMsg])
+        console.log('🗑️ Chat history cleared')
+      }
+    }
+  }
+
+  if (isLoadingMerchant) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل المحادثة...</p>
+        </div>
+      </div>
     )
   }
-}
 
-// Calculate enhanced max tokens
-function calculateMaxTokens(userMessage: string, conversationHistory: any[], context: string): number {
-  const baseTokens = 5000
-  const messageLength = userMessage.length
-  const historyLength = conversationHistory.length
-  const contextLength = context.length
-  
-  let calculatedTokens = baseTokens
-  calculatedTokens += Math.min(messageLength * 3, 20000)
-  calculatedTokens += Math.min(historyLength * 300, 10000)
-  calculatedTokens += Math.min(contextLength / 5, 10000)
-  
-  // Enhanced limit: up to 128K tokens
-  return Math.min(calculatedTokens, 128000)
-}
-
-// Enhanced AI response generator (non-streaming)
-async function generateAIResponse(userMessage: string, context: string, conversationHistory: any[]): Promise<string> {
-  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
-
-  if (!chuteAIApiKey) {
-    console.warn('CHUTES_AI_API_KEY not found, using fallback response')
-    return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
+  if (!merchant) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
+        <Card className="max-w-md mx-auto text-center p-8">
+          <div className="text-red-500 text-6xl mb-4">❌</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">المتجر غير موجود</h1>
+          <p className="text-gray-600">عذراً، لم نتمكن من العثور على هذا المتجر.</p>
+        </Card>
+      </div>
+    )
   }
 
-  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
+  return (
+    <div 
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50"
+      style={{ 
+        background: `linear-gradient(135deg, ${merchant.primaryColor}10, ${merchant.primaryColor}05)`
+      }}
+    >
+      {/* Header */}
+      <div 
+        className="bg-white shadow-lg border-b-4"
+        style={{ borderBottomColor: merchant.primaryColor }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center space-x-4 rtl:space-x-reverse">
+            {merchant.logoUrl ? (
+              <img 
+                src={merchant.logoUrl} 
+                alt={merchant.businessName}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                style={{ backgroundColor: merchant.primaryColor }}
+              >
+                {merchant.businessName.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">{merchant.businessName}</h1>
+              <p className="text-sm text-gray-500">مساعد ذكي • متاح الآن</p>
+            </div>
+            <div className="flex-1"></div>
+            <div className="flex items-center space-x-3 rtl:space-x-reverse">
+              <button
+                onClick={clearChatHistory}
+                className="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                title="مسح المحادثة"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {isStreaming ? 'يكتب...' : 'متصل'}
+                </span>
+                <span className="text-xs text-gray-400">• محفوظ محلياً</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  try {
-    const response = await fetch(chuteAIUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${chuteAIApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
-        messages: [
-          {
-            role: 'user',
-            content: `${context}\n\nالعميل: ${userMessage}`
-          }
-        ],
-        max_tokens: maxTokens,
-        temperature: 0.7,
-        stream: false
-      })
-    })
+      {/* Chat Container */}
+      <div className="max-w-4xl mx-auto p-4 h-[calc(100vh-120px)] flex flex-col">
+        
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto mb-4 space-y-4 pb-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-3 rounded-2xl ${
+                  message.role === 'user'
+                    ? 'text-white shadow-lg'
+                    : 'bg-white text-gray-800 shadow-md border'
+                }`}
+                style={{
+                  backgroundColor: message.role === 'user' ? merchant.primaryColor : undefined
+                }}
+              >
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <p className={`text-xs mt-2 ${
+                  message.role === 'user' ? 'text-white/80' : 'text-gray-500'
+                }`}>
+                  {message.timestamp.toLocaleTimeString('ar-SA', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
+          
+          {/* Streaming message display */}
+          {isStreaming && streamingMessage && (
+            <div className="flex justify-start">
+              <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl max-w-xs sm:max-w-md lg:max-w-lg">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingMessage}</p>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse mt-2">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                  <span className="text-xs text-blue-500">يكتب...</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Loading indicator for initial processing */}
+          {isLoading && !isStreaming && (
+            <div className="flex justify-start">
+              <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <span className="text-sm text-gray-500">جاري التحضير...</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Chutes AI API error:', response.status, response.statusText, errorText)
-      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      let aiResponse = data.choices[0].message.content.trim()
-      
-      // Clean up the response
-      aiResponse = aiResponse.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
-      
-      return aiResponse || 'شكراً لك على تواصلك معنا. كيف يمكنني مساعدتك؟'
-    } else {
-      console.error('Unexpected AI API response format:', data)
-      throw new Error('Invalid AI API response format')
-    }
-
-  } catch (error) {
-    console.error('Error calling Chutes AI API:', error)
-    throw error
-  }
-}
-
-// ENHANCED streaming response generator with 128K tokens support
-async function generateEnhancedAIStreamResponse(
-  userMessage: string, 
-  context: string, 
-  conversationHistory: any[],
-  merchant: any,
-  conversationId: string
-): Promise<Response> {
-  const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
-  const chuteAIUrl = 'https://llm.chutes.ai/v1/chat/completions'
-
-  if (!chuteAIApiKey) {
-    throw new Error('CHUTES_AI_API_KEY not configured')
-  }
-
-  const maxTokens = calculateMaxTokens(userMessage, conversationHistory, context)
-
-  console.log('🚀 Enhanced streaming with:', { maxTokens, model: 'DeepSeek-V3-0324' })
-
-  try {
-    const response = await fetch(chuteAIUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${chuteAIApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
-        messages: [
-          {
-            role: 'user',
-            content: `${context}\n\nالعميل: ${userMessage}`
-          }
-        ],
-        max_tokens: maxTokens,
-        temperature: 0.7,
-        stream: true
-      })
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Chutes AI streaming API error:', response.status, response.statusText, errorText)
-      throw new Error(`AI API error: ${response.status} - ${response.statusText}`)
-    }
-
-    // Create enhanced streaming response
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
-        let accumulatedResponse = ''
-
-        if (!reader) {
-          controller.error(new Error('No response body'))
-          return
-        }
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            
-            if (done) {
-              console.log('✅ Stream completed, saving to database...')
-              
-              // Store the complete response in database
-              if (accumulatedResponse.trim()) {
-                await supabaseAdmin
-                  .from('Message')
-                  .insert({
-                    conversationId,
-                    role: 'ASSISTANT',
-                    content: accumulatedResponse.trim()
-                  })
-              }
-              
-              // Send completion signal
-              controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
-              controller.close()
-              break
-            }
-
-            const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n')
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6).trim()
-                
-                if (data === '[DONE]') {
-                  continue
-                }
-
-                try {
-                  const parsed = JSON.parse(data)
-                  const content = parsed.choices?.[0]?.delta?.content || ''
-                  
-                  if (content) {
-                    accumulatedResponse += content
-                    
-                    // Clean up content for first few characters
-                    let cleanContent = content
-                    if (accumulatedResponse.length < 50) {
-                      cleanContent = content.replace(/^(مساعد|المساعد|أنا|مرحباً،?|أهلاً،?)\s*/i, '')
-                    }
-                    
-                    // Send the chunk immediately to client
-                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-                      content: cleanContent,
-                      delta: cleanContent
-                    })}\n\n`))
-                  }
-                } catch (parseError) {
-                  console.error('Error parsing streaming chunk:', parseError)
-                }
-              }
-            }
-          }
-
-        } catch (error) {
-          console.error('Streaming error:', error)
-          controller.error(error)
-        }
-      }
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'X-Accel-Buffering': 'no'
-      }
-    })
-
-  } catch (error) {
-    console.error('Error calling enhanced Chutes AI streaming API:', error)
-    throw error
-  }
+        {/* Input Area */}
+        <div className="bg-white rounded-2xl shadow-lg border p-4">
+          <div className="flex items-end space-x-3 rtl:space-x-reverse">
+            <div className="flex-1">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="اكتب رسالتك هنا..."
+                className="resize-none border-0 focus:ring-0 text-base"
+                disabled={isLoading}
+                dir="rtl"
+              />
+            </div>
+            <Button
+              onClick={sendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: merchant.primaryColor,
+                borderColor: merchant.primaryColor
+              }}
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                'إرسال'
+              )}
+            </Button>
+          </div>
+          
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+            <p>اضغط Enter للإرسال • Shift + Enter للسطر الجديد</p>
+            <p className="flex items-center space-x-1 rtl:space-x-reverse">
+              <span>مدعوم بـ</span>
+              <span className="font-semibold" style={{ color: merchant.primaryColor }}>
+                AI Shop Mate
+              </span>
+              {isStreaming && (
+                <span className="text-blue-500 animate-pulse">• live streaming</span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 } 
