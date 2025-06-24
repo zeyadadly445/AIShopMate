@@ -12,6 +12,7 @@ export async function GET() {
         hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
         adminId: process.env.ADMIN_ID || 'not-set',
         hasJwtSecret: !!process.env.JWT_SECRET,
+        jwtSecretLength: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
       },
       defaultValues: {
         defaultUsername: 'admin_zeyad',
