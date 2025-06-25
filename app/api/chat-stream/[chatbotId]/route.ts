@@ -28,7 +28,7 @@ export async function POST(
       )
     }
 
-    // 1. Get merchant information only
+    // 1. Get merchant information with subscription data
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
       .select(`
@@ -36,6 +36,15 @@ export async function POST(
         businessName,
         welcomeMessage,
         primaryColor,
+        subscription:Subscription(
+          id,
+          plan,
+          status,
+          messagesLimit,
+          messagesUsed,
+          lastReset,
+          merchantId
+        ),
         dataSources:MerchantDataSource(
           type,
           title,
@@ -56,11 +65,63 @@ export async function POST(
 
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 2. Check if AI key exists
+    // 2. Check subscription limits
+    let subscription = Array.isArray(merchant.subscription) 
+      ? merchant.subscription[0] 
+      : merchant.subscription
+
+    if (subscription) {
+      // فحص حالة الاشتراك
+      if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
+        console.log('🚫 Subscription inactive:', subscription.status)
+        return NextResponse.json({
+          error: 'subscription_inactive',
+          response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.',
+          redirectTo: `/chat/${chatbotId}/limit-reached`,
+          reason: 'subscription_inactive'
+        }, { status: 403 })
+      }
+
+      // فحص حد الرسائل
+      if (subscription.messagesUsed >= subscription.messagesLimit) {
+        console.log('🚫 Message limit reached:', subscription.messagesUsed, '>=', subscription.messagesLimit)
+        return NextResponse.json({
+          error: 'limit_reached',
+          response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
+          redirectTo: `/chat/${chatbotId}/limit-reached`,
+          reason: 'message_limit_reached',
+          usage: {
+            used: subscription.messagesUsed,
+            limit: subscription.messagesLimit
+          }
+        }, { status: 403 })
+      }
+
+      // Log usage for monitoring
+      const usagePercentage = Math.round((subscription.messagesUsed / subscription.messagesLimit) * 100)
+      console.log('📊 Current usage:', {
+        used: subscription.messagesUsed,
+        limit: subscription.messagesLimit,
+        percentage: usagePercentage,
+        remaining: subscription.messagesLimit - subscription.messagesUsed
+      })
+    }
+
+    // 3. Check if AI key exists
     const chuteAIApiKey = process.env.CHUTES_AI_API_KEY
 
     if (!chuteAIApiKey) {
       console.log('⚠️ AI API key not found, using smart fallback')
+      
+      // Update message count for fallback response
+      if (subscription) {
+        await supabaseAdmin
+          .from('Subscription')
+          .update({ messagesUsed: subscription.messagesUsed + 1 })
+          .eq('merchantId', merchant.id)
+        console.log('📊 Message count updated (fallback):', subscription.messagesUsed + 1)
+      }
+      
       return NextResponse.json({ 
         response: generateSmartFallback(message, merchant.businessName, conversationHistory),
         merchant: {
@@ -105,6 +166,15 @@ export async function POST(
             console.log('❌ AI request failed, sending fallback')
             const fallback = generateSmartFallback(message, merchant.businessName, conversationHistory)
             
+            // Update message count for fallback response
+            if (subscription) {
+              await supabaseAdmin
+                .from('Subscription')
+                .update({ messagesUsed: subscription.messagesUsed + 1 })
+                .eq('merchantId', merchant.id)
+              console.log('📊 Message count updated (AI error fallback):', subscription.messagesUsed + 1)
+            }
+            
             // Send fallback as JSON
             controller.enqueue(encoder.encode(JSON.stringify({
               type: 'fallback',
@@ -143,6 +213,16 @@ export async function POST(
             
             if (done) {
               console.log('✅ Stream completed')
+              
+              // Update message count
+              if (subscription) {
+                await supabaseAdmin
+                  .from('Subscription')
+                  .update({ messagesUsed: subscription.messagesUsed + 1 })
+                  .eq('merchantId', merchant.id)
+                console.log('📊 Message count updated:', subscription.messagesUsed + 1)
+              }
+              
               // Send completion signal
               controller.enqueue(encoder.encode(JSON.stringify({
                 type: 'done'
@@ -188,6 +268,19 @@ export async function POST(
           
         } catch (error) {
           console.error('💥 Streaming error:', error)
+          
+          // Update message count for error fallback response
+          if (subscription) {
+            try {
+              await supabaseAdmin
+                .from('Subscription')
+                .update({ messagesUsed: subscription.messagesUsed + 1 })
+                .eq('merchantId', merchant.id)
+              console.log('📊 Message count updated (error fallback):', subscription.messagesUsed + 1)
+            } catch (updateError) {
+              console.error('Failed to update message count on error:', updateError)
+            }
+          }
           
           // Send fallback on error
           const fallback = generateSmartFallback(message, merchant.businessName, conversationHistory)

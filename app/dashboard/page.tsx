@@ -287,15 +287,108 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Usage Monitor - Special Large Card */}
+        <div className="bg-white shadow-lg rounded-lg p-6 mb-8 border-l-4 border-blue-500">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              📊 مراقب الاستهلاك المباشر
+              <span className="mr-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></div>
+                Live
+              </span>
+            </h2>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">آخر تحديث</div>
+              <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('ar-SA')}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Usage Progress */}
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">استهلاك الرسائل</span>
+                <span className={`text-sm font-bold ${
+                  stats.subscription.usagePercentage >= 90 ? 'text-red-600' :
+                  stats.subscription.usagePercentage >= 75 ? 'text-yellow-600' : 'text-green-600'
+                }`}>
+                  {stats.subscription.usagePercentage}%
+                </span>
+              </div>
+              
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                <div 
+                  className={`h-4 rounded-full transition-all duration-500 ${
+                    stats.subscription.usagePercentage >= 90 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    stats.subscription.usagePercentage >= 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    stats.subscription.usagePercentage >= 50 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                    'bg-gradient-to-r from-green-500 to-green-600'
+                  }`}
+                  style={{ width: `${Math.min(stats.subscription.usagePercentage, 100)}%` }}
+                ></div>
+              </div>
+
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{stats.subscription.messagesUsed.toLocaleString()} مستخدم</span>
+                <span>{stats.subscription.remainingMessages.toLocaleString()} متبقي</span>
+                <span>{stats.subscription.messagesLimit.toLocaleString()} إجمالي</span>
+              </div>
+            </div>
+
+            {/* Status Indicator */}
+            <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-4">
+              {stats.subscription.usagePercentage >= 100 ? (
+                <>
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mb-2 animate-pulse">
+                    <span className="text-white text-2xl">🚫</span>
+                  </div>
+                  <span className="text-red-600 font-bold text-sm">تم الوصول للحد</span>
+                  <span className="text-red-500 text-xs">الخدمة متوقفة</span>
+                </>
+              ) : stats.subscription.usagePercentage >= 90 ? (
+                <>
+                  <div className="w-16 h-16 bg-red-400 rounded-full flex items-center justify-center mb-2 animate-bounce">
+                    <span className="text-white text-2xl">⚠️</span>
+                  </div>
+                  <span className="text-red-600 font-bold text-sm">تحذير عالي</span>
+                  <span className="text-red-500 text-xs">قارب الانتهاء</span>
+                </>
+              ) : stats.subscription.usagePercentage >= 75 ? (
+                <>
+                  <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mb-2">
+                    <span className="text-white text-2xl">⚡</span>
+                  </div>
+                  <span className="text-yellow-600 font-bold text-sm">تحذير متوسط</span>
+                  <span className="text-yellow-500 text-xs">راقب الاستهلاك</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-2">
+                    <span className="text-white text-2xl">✅</span>
+                  </div>
+                  <span className="text-green-600 font-bold text-sm">حالة ممتازة</span>
+                  <span className="text-green-500 text-xs">استخدام طبيعي</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           
           {/* Messages Usage Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className={`bg-white overflow-hidden shadow rounded-lg border-l-4 ${
+            stats.subscription.usagePercentage >= 90 ? 'border-red-500' :
+            stats.subscription.usagePercentage >= 75 ? 'border-yellow-500' : 'border-green-500'
+          }`}>
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    stats.subscription.usagePercentage >= 90 ? 'bg-red-500' :
+                    stats.subscription.usagePercentage >= 75 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}>
                     <span className="text-white text-sm font-bold">💬</span>
                   </div>
                 </div>
@@ -311,18 +404,16 @@ export default function DashboardPage() {
                 </div>
               </div>
               
-              {/* Progress Bar */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-900">{stats.subscription.usagePercentage}% مستخدم</span>
-                  <span className="text-gray-900">{stats.subscription.remainingMessages.toLocaleString()} متبقي</span>
-                </div>
-                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-300 ${getUsageColor(stats.subscription.usagePercentage)}`}
-                    style={{ width: `${Math.min(stats.subscription.usagePercentage, 100)}%` }}
-                  ></div>
-                </div>
+              {/* Quick Status */}
+              <div className="mt-3 text-center">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  stats.subscription.usagePercentage >= 90 ? 'bg-red-100 text-red-800' :
+                  stats.subscription.usagePercentage >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {stats.subscription.usagePercentage >= 90 ? '🚨 حرج' :
+                   stats.subscription.usagePercentage >= 75 ? '⚠️ تحذير' : '✅ آمن'}
+                </span>
               </div>
             </div>
           </div>
@@ -486,6 +577,111 @@ export default function DashboardPage() {
               >
                 نسخ الرابط
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Real-time Usage Analytics */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">📈 تحليلات الاستخدام المفصلة</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Daily Usage Estimate */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">📅 تقدير الاستهلاك اليومي</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-blue-700">المعدل اليومي:</span>
+                  <span className="text-sm font-bold text-blue-900">
+                    {Math.round(stats.subscription.messagesUsed / Math.max(1, Math.ceil((new Date().getTime() - new Date(stats.subscription.createdAt).getTime()) / (1000 * 60 * 60 * 24))))} رسالة/يوم
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-blue-700">أيام متبقية بالمعدل الحالي:</span>
+                  <span className="text-sm font-bold text-blue-900">
+                    {stats.subscription.messagesUsed > 0 ? 
+                      Math.floor(stats.subscription.remainingMessages / Math.max(1, Math.round(stats.subscription.messagesUsed / Math.max(1, Math.ceil((new Date().getTime() - new Date(stats.subscription.createdAt).getTime()) / (1000 * 60 * 60 * 24)))))) :
+                      '∞'
+                    } يوم
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Usage Efficiency */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">🎯 كفاءة الاستخدام</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-green-700">درجة الكفاءة:</span>
+                  <span className={`text-sm font-bold ${
+                    stats.subscription.usagePercentage <= 50 ? 'text-green-900' :
+                    stats.subscription.usagePercentage <= 75 ? 'text-yellow-700' : 'text-red-700'
+                  }`}>
+                    {stats.subscription.usagePercentage <= 50 ? 'ممتازة' :
+                     stats.subscription.usagePercentage <= 75 ? 'جيدة' : 'تحتاج مراقبة'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-green-700">توصية:</span>
+                  <span className="text-xs text-green-900">
+                    {stats.subscription.usagePercentage <= 50 ? 'استخدم أكثر' :
+                     stats.subscription.usagePercentage <= 75 ? 'استخدام مثالي' : 'راقب الاستهلاك'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* System Health */}
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-900 mb-2">🔧 صحة النظام</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-purple-700">حالة الخدمة:</span>
+                  <span className={`text-sm font-bold ${
+                    stats.systemStatus === 'limit_reached' ? 'text-red-700' : 'text-green-700'
+                  }`}>
+                    {stats.systemStatus === 'limit_reached' ? '🚫 متوقف' : '✅ نشط'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-purple-700">آخر نشاط:</span>
+                  <span className="text-xs text-purple-900">منذ دقائق</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Timeline Prediction */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold text-gray-900 mb-3">📊 توقعات الاستهلاك</h3>
+            <div className="space-y-3">
+              {[
+                { period: 'أسبوع', usage: Math.min(100, stats.subscription.usagePercentage + (stats.subscription.usagePercentage * 0.1)), days: 7 },
+                { period: 'أسبوعين', usage: Math.min(100, stats.subscription.usagePercentage + (stats.subscription.usagePercentage * 0.25)), days: 14 },
+                { period: 'شهر', usage: Math.min(100, stats.subscription.usagePercentage + (stats.subscription.usagePercentage * 0.5)), days: 30 }
+              ].map((prediction, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">خلال {prediction.period}:</span>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          prediction.usage >= 90 ? 'bg-red-500' :
+                          prediction.usage >= 75 ? 'bg-yellow-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(prediction.usage, 100)}%` }}
+                      ></div>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      prediction.usage >= 90 ? 'text-red-600' :
+                      prediction.usage >= 75 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {Math.round(prediction.usage)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

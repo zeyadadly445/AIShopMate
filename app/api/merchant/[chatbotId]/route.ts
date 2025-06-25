@@ -22,7 +22,15 @@ export async function GET(
         primaryColor,
         logoUrl,
         email,
-        phone
+        phone,
+        subscription:Subscription(
+          id,
+          plan,
+          status,
+          messagesLimit,
+          messagesUsed,
+          lastReset
+        )
       `)
       .eq('chatbotId', chatbotId)
       .single()
@@ -36,6 +44,14 @@ export async function GET(
       return NextResponse.json({ error: 'Merchant not found' }, { status: 404 })
     }
 
+    // Process subscription data (handle array format from Supabase)
+    let subscription = null
+    if (merchant.subscription) {
+      subscription = Array.isArray(merchant.subscription) 
+        ? merchant.subscription[0] 
+        : merchant.subscription
+    }
+
     // Return merchant data (excluding sensitive information)
     return NextResponse.json({
       id: merchant.id,
@@ -43,6 +59,13 @@ export async function GET(
       welcomeMessage: merchant.welcomeMessage,
       primaryColor: merchant.primaryColor,
       logoUrl: merchant.logoUrl,
+      subscription: subscription ? {
+        plan: subscription.plan,
+        status: subscription.status,
+        messagesLimit: subscription.messagesLimit,
+        messagesUsed: subscription.messagesUsed,
+        lastReset: subscription.lastReset
+      } : null
     })
 
   } catch (error) {

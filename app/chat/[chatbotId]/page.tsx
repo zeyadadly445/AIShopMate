@@ -73,6 +73,33 @@ export default function ChatPage({ params }: ChatPageProps) {
         const response = await fetch(`/api/merchant/${chatbotId}`)
         if (response.ok) {
           const merchantData = await response.json()
+          
+          // 🔒 فحص حالة الاشتراك قبل السماح بالدخول
+          if (merchantData.subscription) {
+            const subscription = merchantData.subscription
+            
+            // فحص حالة الاشتراك
+            if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
+              console.log('🚫 Redirecting: Subscription inactive -', subscription.status)
+              window.location.href = `/chat/${chatbotId}/limit-reached`
+              return
+            }
+            
+            // فحص حد الرسائل
+            if (subscription.messagesUsed >= subscription.messagesLimit) {
+              console.log('🚫 Redirecting: Message limit reached -', subscription.messagesUsed, '>=', subscription.messagesLimit)
+              window.location.href = `/chat/${chatbotId}/limit-reached`
+              return
+            }
+            
+            console.log('✅ Subscription valid:', {
+              status: subscription.status,
+              used: subscription.messagesUsed,
+              limit: subscription.messagesLimit,
+              remaining: subscription.messagesLimit - subscription.messagesUsed
+            })
+          }
+          
           setMerchant(merchantData)
           
           // Load saved messages from localStorage

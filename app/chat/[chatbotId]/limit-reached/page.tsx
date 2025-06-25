@@ -8,6 +8,13 @@ interface MerchantInfo {
   primaryColor: string
   logoUrl?: string
   email?: string
+  subscription?: {
+    plan: string
+    status: string
+    messagesLimit: number
+    messagesUsed: number
+    lastReset: string
+  }
 }
 
 interface LimitReachedPageProps {
@@ -126,6 +133,44 @@ export default function LimitReachedPage({ params }: LimitReachedPageProps) {
                     وصل صاحب المتجر للحد الأقصى من الرسائل المسموح بها في خطة الاشتراك الحالية، 
                     وبالتالي تم إيقاف خدمة الشات بوت مؤقتاً.
                   </p>
+                  
+                  {/* عرض معلومات الاشتراك التفصيلية */}
+                  {merchant?.subscription && (
+                    <div className="mt-4 bg-red-100 border border-red-300 rounded p-3">
+                      <h4 className="font-semibold text-red-900 mb-2">📊 تفاصيل الاشتراك:</h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="font-medium">الخطة:</span>
+                          <div className="text-red-800">{merchant.subscription.plan}</div>
+                        </div>
+                        <div>
+                          <span className="font-medium">الحالة:</span>
+                          <div className="text-red-800">{merchant.subscription.status}</div>
+                        </div>
+                        <div>
+                          <span className="font-medium">الرسائل المستخدمة:</span>
+                          <div className="text-red-800">{merchant.subscription.messagesUsed.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span className="font-medium">الحد الأقصى:</span>
+                          <div className="text-red-800">{merchant.subscription.messagesLimit.toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <div className="bg-red-200 rounded-full h-2 w-full">
+                          <div 
+                            className="bg-red-600 h-2 rounded-full" 
+                            style={{ 
+                              width: `${Math.min((merchant.subscription.messagesUsed / merchant.subscription.messagesLimit) * 100, 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-red-700 mt-1 text-center">
+                          {Math.round((merchant.subscription.messagesUsed / merchant.subscription.messagesLimit) * 100)}% مستخدم
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

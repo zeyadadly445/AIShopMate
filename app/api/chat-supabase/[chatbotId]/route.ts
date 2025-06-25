@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { checkAndPerformReset, type SubscriptionData } from '@/lib/monthly-reset'
 
 export async function POST(
   request: NextRequest,
@@ -75,50 +74,39 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // 2. Check monthly reset and subscription limits
+    // 2. Check subscription limits
     let subscription = Array.isArray(merchant.subscription) 
       ? merchant.subscription[0] 
       : merchant.subscription
 
     if (subscription) {
-      // تحويل البيانات إلى النموذج المطلوب للتجديد الشهري
-      const subscriptionData: SubscriptionData = {
-        id: subscription.id,
-        plan: subscription.plan,
-        status: subscription.status,
-        messagesLimit: subscription.messagesLimit,
-        messagesUsed: subscription.messagesUsed,
-        lastReset: subscription.lastReset,
-        merchantId: subscription.merchantId
-      }
-
-      // التحقق من التجديد الشهري وتطبيقه إذا لزم الأمر
-      const updatedSubscription = await checkAndPerformReset(supabaseAdmin, subscriptionData)
-      
-      // تحديث بيانات الاشتراك إذا تم التجديد
-      if (updatedSubscription.messagesUsed !== subscription.messagesUsed) {
-        subscription = {
-          ...subscription,
-          messagesUsed: updatedSubscription.messagesUsed,
-          messagesLimit: updatedSubscription.messagesLimit,
-          lastReset: updatedSubscription.lastReset
-        }
-        console.log(`🔄 تم تجديد الرسائل الشهري للتاجر: ${merchant.businessName}`)
-      }
-
       // فحص حالة الاشتراك
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
+        console.log('🚫 Subscription inactive:', subscription.status)
         return NextResponse.json(
-          { response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
+          { 
+            response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.',
+            redirectTo: `/chat/${chatbotId}/limit-reached`,
+            reason: 'subscription_inactive'
+          },
+          { status: 403 }
         )
       }
 
-      // فحص حد الرسائل بعد التجديد المحتمل
+      // فحص حد الرسائل
       if (subscription.messagesUsed >= subscription.messagesLimit) {
+        console.log('🚫 Message limit reached:', subscription.messagesUsed, '>=', subscription.messagesLimit)
         return NextResponse.json(
-          { response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.' },
-          { status: 200 }
+          { 
+            response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
+            redirectTo: `/chat/${chatbotId}/limit-reached`,
+            reason: 'message_limit_reached',
+            usage: {
+              used: subscription.messagesUsed,
+              limit: subscription.messagesLimit
+            }
+          },
+          { status: 403 }
         )
       }
     }
