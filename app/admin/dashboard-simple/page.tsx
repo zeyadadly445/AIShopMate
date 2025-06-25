@@ -351,6 +351,13 @@ export default function SimpleAdminDashboardPage() {
                 آخر تحديث: {new Date(data.lastUpdated).toLocaleTimeString('ar-SA')}
               </div>
               <button
+                onClick={() => router.push('/admin/monthly-reset')}
+                className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm"
+                title="إدارة التجديد الشهري"
+              >
+                🔄 التجديد الشهري
+              </button>
+              <button
                 onClick={() => session && fetchDashboardData(session)}
                 className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
                 title="تحديث البيانات"

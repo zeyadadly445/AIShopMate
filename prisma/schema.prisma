@@ -72,6 +72,7 @@ model Subscription {
   status        SubscriptionStatus @default(TRIAL)
   messagesLimit Int                @default(1000)
   messagesUsed  Int                @default(0)
+  lastReset     DateTime           @default(now())
   startDate     DateTime           @default(now())
   endDate       DateTime?
   createdAt     DateTime           @default(now())

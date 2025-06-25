@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { checkAndPerformReset, type SubscriptionData } from '@/lib/monthly-reset'
 
 export async function POST(
   request: NextRequest,
@@ -42,9 +43,13 @@ export async function POST(
         welcomeMessage,
         primaryColor,
         subscription:Subscription(
+          id,
+          plan,
+          status,
           messagesLimit,
           messagesUsed,
-          status
+          lastReset,
+          merchantId
         ),
         dataSources:MerchantDataSource(
           type,
@@ -70,12 +75,38 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // 2. Check subscription limits
-    const subscription = Array.isArray(merchant.subscription) 
+    // 2. Check monthly reset and subscription limits
+    let subscription = Array.isArray(merchant.subscription) 
       ? merchant.subscription[0] 
       : merchant.subscription
 
     if (subscription) {
+      // تحويل البيانات إلى النموذج المطلوب للتجديد الشهري
+      const subscriptionData: SubscriptionData = {
+        id: subscription.id,
+        plan: subscription.plan,
+        status: subscription.status,
+        messagesLimit: subscription.messagesLimit,
+        messagesUsed: subscription.messagesUsed,
+        lastReset: subscription.lastReset,
+        merchantId: subscription.merchantId
+      }
+
+      // التحقق من التجديد الشهري وتطبيقه إذا لزم الأمر
+      const updatedSubscription = await checkAndPerformReset(supabaseAdmin, subscriptionData)
+      
+      // تحديث بيانات الاشتراك إذا تم التجديد
+      if (updatedSubscription.messagesUsed !== subscription.messagesUsed) {
+        subscription = {
+          ...subscription,
+          messagesUsed: updatedSubscription.messagesUsed,
+          messagesLimit: updatedSubscription.messagesLimit,
+          lastReset: updatedSubscription.lastReset
+        }
+        console.log(`🔄 تم تجديد الرسائل الشهري للتاجر: ${merchant.businessName}`)
+      }
+
+      // فحص حالة الاشتراك
       if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
         return NextResponse.json(
           { response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.' },
@@ -83,6 +114,7 @@ export async function POST(
         )
       }
 
+      // فحص حد الرسائل بعد التجديد المحتمل
       if (subscription.messagesUsed >= subscription.messagesLimit) {
         return NextResponse.json(
           { response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.' },
