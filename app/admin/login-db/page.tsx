@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
     // التحقق من وجود جلسة مدير نشطة
     const session = getAdminSession()
     if (session) {
-      router.push('/admin/dashboard')
+      router.push('/admin/dashboard-db')
     }
   }, [router])
 
@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
       if (response.ok && data.success) {
         console.log('✅ Database login successful!')
         setAdminSession(data.token)
-        router.push('/admin/dashboard')
+        router.push('/admin/dashboard-db')
       } else {
         console.log('❌ Database login failed:', data.error)
         setError(data.error || 'فشل في تسجيل الدخول')

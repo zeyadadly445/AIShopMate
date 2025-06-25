@@ -62,10 +62,12 @@ interface DashboardData {
   adminSession: {
     username: string
     loginTime: number
+    adminId: string
+    dbId: number
   }
 }
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardDbPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -97,6 +99,8 @@ export default function AdminDashboardPage() {
         return
       }
 
+      console.log('🔍 Fetching database admin dashboard data...')
+
       const response = await fetch('/api/admin/dashboard-db', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
@@ -113,6 +117,7 @@ export default function AdminDashboardPage() {
       }
 
       const dashboardData = await response.json()
+      console.log('✅ Database dashboard data loaded successfully')
       setData(dashboardData)
       setError('')
     } catch (err) {
@@ -160,6 +165,7 @@ export default function AdminDashboardPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
           <p className="mt-4 text-white">جاري تحميل لوحة الإدارة...</p>
+          <p className="mt-2 text-sm text-green-400">🗃️ نظام قاعدة البيانات</p>
         </div>
       </div>
     )
@@ -195,6 +201,7 @@ export default function AdminDashboardPage() {
               <div>
                 <h1 className="text-xl font-bold">لوحة التحكم الإدارية</h1>
                 <p className="text-sm text-gray-400">مرحباً، {data.adminSession.username}</p>
+                <p className="text-xs text-green-400">🗃️ نظام قاعدة البيانات (DB ID: {data.adminSession.dbId})</p>
               </div>
             </div>
             
@@ -487,6 +494,9 @@ export default function AdminDashboardPage() {
             <div className="text-center py-12">
               <h3 className="text-2xl font-bold text-gray-400 mb-4">📊 قسم التحليلات</h3>
               <p className="text-gray-500">سيتم إضافة المزيد من التحليلات والرسوم البيانية قريباً</p>
+              <div className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded-lg">
+                <p className="text-green-300 text-sm">🗃️ نظام قاعدة البيانات نشط</p>
+              </div>
             </div>
           </div>
         )}
@@ -498,7 +508,7 @@ export default function AdminDashboardPage() {
           <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold">تفاصيل المستخدم</h3>
+                <h3 className="text-xl font-bold text-white">تفاصيل المستخدم</h3>
                 <button
                   onClick={() => setSelectedMerchant(null)}
                   className="text-gray-400 hover:text-white"
@@ -508,64 +518,82 @@ export default function AdminDashboardPage() {
               </div>
               
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400">اسم المتجر</label>
-                    <p className="text-white">{selectedMerchant.businessName}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400">البريد الإلكتروني</label>
-                    <p className="text-white">{selectedMerchant.email}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400">رقم الهاتف</label>
-                    <p className="text-white">{selectedMerchant.phone || 'غير محدد'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400">معرف الشات بوت</label>
-                    <p className="text-white font-mono">{selectedMerchant.chatbotId}</p>
-                  </div>
+                <div>
+                  <label className="text-sm text-gray-400">اسم العمل</label>
+                  <p className="text-white font-medium">{selectedMerchant.businessName}</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400">رسالة الترحيب</label>
-                  <p className="text-white bg-gray-700 p-3 rounded">{selectedMerchant.welcomeMessage}</p>
+                  <label className="text-sm text-gray-400">البريد الإلكتروني</label>
+                  <p className="text-white">{selectedMerchant.email}</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400">اللون الأساسي</label>
+                  <label className="text-sm text-gray-400">رقم الهاتف</label>
+                  <p className="text-white">{selectedMerchant.phone || 'غير محدد'}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400">معرف الشات بوت</label>
+                  <p className="text-white font-mono">{selectedMerchant.chatbotId}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400">رسالة الترحيب</label>
+                  <p className="text-white">{selectedMerchant.welcomeMessage}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400">اللون الأساسي</label>
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
                     <div 
-                      className="w-8 h-8 rounded border border-gray-600"
+                      className="w-6 h-6 rounded border border-gray-600"
                       style={{ backgroundColor: selectedMerchant.primaryColor }}
                     ></div>
-                    <span className="text-white">{selectedMerchant.primaryColor}</span>
+                    <span className="text-white font-mono">{selectedMerchant.primaryColor}</span>
                   </div>
                 </div>
-
+                
                 {selectedMerchant.subscription && (
-                  <div className="border-t border-gray-700 pt-4">
-                    <h4 className="font-medium text-white mb-3">تفاصيل الاشتراك</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="border-t border-gray-700 pt-4 mt-4">
+                    <h4 className="text-lg font-semibold text-white mb-3">معلومات الاشتراك</h4>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="text-gray-400">الخطة:</span>
-                        <span className="text-white mr-2">{selectedMerchant.subscription.plan}</span>
+                        <label className="text-sm text-gray-400">الخطة</label>
+                        <p className="text-white">{selectedMerchant.subscription.plan}</p>
                       </div>
                       <div>
-                        <span className="text-gray-400">الحالة:</span>
-                        <span className="text-white mr-2">{selectedMerchant.subscription.status}</span>
+                        <label className="text-sm text-gray-400">الحالة</label>
+                        <p className="text-white">{selectedMerchant.subscription.status}</p>
                       </div>
                       <div>
-                        <span className="text-gray-400">الرسائل المستخدمة:</span>
-                        <span className="text-white mr-2">{selectedMerchant.subscription.messagesUsed.toLocaleString()}</span>
+                        <label className="text-sm text-gray-400">الرسائل المستخدمة</label>
+                        <p className="text-white">{selectedMerchant.subscription.messagesUsed.toLocaleString()}</p>
                       </div>
                       <div>
-                        <span className="text-gray-400">الحد الأقصى:</span>
-                        <span className="text-white mr-2">{selectedMerchant.subscription.messagesLimit.toLocaleString()}</span>
+                        <label className="text-sm text-gray-400">حد الرسائل</label>
+                        <p className="text-white">{selectedMerchant.subscription.messagesLimit.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
                 )}
+              </div>
+              
+              <div className="flex justify-end space-x-4 rtl:space-x-reverse mt-6">
+                <button
+                  onClick={() => setSelectedMerchant(null)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  إغلاق
+                </button>
+                <a
+                  href={`/chat/${selectedMerchant.chatbotId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  زيارة الشات بوت
+                </a>
               </div>
             </div>
           </div>
