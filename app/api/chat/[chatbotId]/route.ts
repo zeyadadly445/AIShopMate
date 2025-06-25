@@ -144,6 +144,21 @@ export async function POST(
           .eq('merchantId', merchant.id)
       }
 
+      // Update daily usage statistics for regular response
+      try {
+        const { error: dailyStatsError } = await supabaseAdmin
+          .rpc('increment_daily_usage', {
+            merchant_id: merchant.id,
+            session_id: sessionId || 'regular_session_' + Date.now()
+          })
+
+        if (!dailyStatsError) {
+          console.log('📊 Daily stats updated for merchant:', merchant.id)
+        }
+      } catch (dailyStatsError) {
+        console.error('Error updating daily stats:', dailyStatsError)
+      }
+
       return NextResponse.json({ response: aiResponse })
     }
 
@@ -295,6 +310,21 @@ async function generateStreamingResponse(
                   .update({ messagesUsed: subscription.messagesUsed + 1 })
                   .eq('merchantId', merchant.id)
                 console.log('📊 Message count updated')
+
+                // Update daily usage statistics for streaming response
+                try {
+                  const { error: dailyStatsError } = await supabaseAdmin
+                    .rpc('increment_daily_usage', {
+                      merchant_id: merchant.id,
+                      session_id: 'streaming_session_' + Date.now()
+                    })
+
+                  if (!dailyStatsError) {
+                    console.log('📊 Daily stats updated for streaming response:', merchant.id)
+                  }
+                } catch (dailyStatsError) {
+                  console.error('Error updating daily stats in streaming:', dailyStatsError)
+                }
               }
               
               controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))

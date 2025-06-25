@@ -227,6 +227,23 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
       }
     }
 
+    // 10. Update daily usage statistics
+    try {
+      const { error: dailyStatsError } = await supabaseAdmin
+        .rpc('increment_daily_usage', {
+          merchant_id: merchant.id,
+          session_id: sessionId
+        })
+
+      if (dailyStatsError) {
+        console.error('Error updating daily stats:', dailyStatsError)
+      } else {
+        console.log('📊 Daily stats updated for merchant:', merchant.id)
+      }
+    } catch (dailyStatsError) {
+      console.error('Error calling increment_daily_usage:', dailyStatsError)
+    }
+
     return NextResponse.json({ response: aiResponse })
 
   } catch (error) {

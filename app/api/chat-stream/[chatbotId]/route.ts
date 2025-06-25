@@ -121,6 +121,18 @@ export async function POST(
           .eq('merchantId', merchant.id)
         console.log('📊 Message count updated (fallback):', subscription.messagesUsed + 1)
       }
+
+      // Update daily usage statistics for fallback
+      try {
+        await supabaseAdmin
+          .rpc('increment_daily_usage', {
+            merchant_id: merchant.id,
+            session_id: 'fallback_session_' + Date.now()
+          })
+        console.log('📊 Daily stats updated (fallback) for merchant:', merchant.id)
+      } catch (dailyStatsError) {
+        console.error('Error updating daily stats (fallback):', dailyStatsError)
+      }
       
       return NextResponse.json({ 
         response: generateSmartFallback(message, merchant.businessName, conversationHistory),
@@ -174,6 +186,18 @@ export async function POST(
                 .eq('merchantId', merchant.id)
               console.log('📊 Message count updated (AI error fallback):', subscription.messagesUsed + 1)
             }
+
+            // Update daily usage statistics for AI error fallback
+            try {
+              await supabaseAdmin
+                .rpc('increment_daily_usage', {
+                  merchant_id: merchant.id,
+                  session_id: 'ai_error_session_' + Date.now()
+                })
+              console.log('📊 Daily stats updated (AI error fallback) for merchant:', merchant.id)
+            } catch (dailyStatsError) {
+              console.error('Error updating daily stats (AI error fallback):', dailyStatsError)
+            }
             
             // Send fallback as JSON
             controller.enqueue(encoder.encode(JSON.stringify({
@@ -221,6 +245,21 @@ export async function POST(
                   .update({ messagesUsed: subscription.messagesUsed + 1 })
                   .eq('merchantId', merchant.id)
                 console.log('📊 Message count updated:', subscription.messagesUsed + 1)
+              }
+
+              // Update daily usage statistics
+              try {
+                const { error: dailyStatsError } = await supabaseAdmin
+                  .rpc('increment_daily_usage', {
+                    merchant_id: merchant.id,
+                    session_id: 'stream_session_' + Date.now() // Generate session ID for stream
+                  })
+
+                if (!dailyStatsError) {
+                  console.log('📊 Daily stats updated for merchant:', merchant.id)
+                }
+              } catch (dailyStatsError) {
+                console.error('Error updating daily stats:', dailyStatsError)
               }
               
               // Send completion signal
@@ -280,6 +319,18 @@ export async function POST(
             } catch (updateError) {
               console.error('Failed to update message count on error:', updateError)
             }
+          }
+
+          // Update daily usage statistics for error fallback
+          try {
+            await supabaseAdmin
+              .rpc('increment_daily_usage', {
+                merchant_id: merchant.id,
+                session_id: 'error_session_' + Date.now()
+              })
+            console.log('📊 Daily stats updated (error fallback) for merchant:', merchant.id)
+          } catch (dailyStatsError) {
+            console.error('Error updating daily stats (error fallback):', dailyStatsError)
           }
           
           // Send fallback on error

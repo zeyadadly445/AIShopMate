@@ -24,6 +24,56 @@ interface MerchantData {
   createdAt: string
 }
 
+interface DailyStatsData {
+  today: {
+    messages: number
+    sessions: number
+    date: string
+  }
+  thisMonth: {
+    totalMessages: number
+    totalSessions: number
+    activeDays: number
+    dailyAverage: number
+    peakDay: {
+      date: string
+      messages: number
+    } | null
+  }
+  thisWeek: {
+    totalMessages: number
+    dailyAverage: number
+    growth: number
+  }
+  subscription: {
+    plan: string
+    status: string
+    totalLimit: number
+    totalUsed: number
+    remainingTotal: number
+    usagePercentage: number
+    monthlyUsed: number
+    monthlyRemaining: number
+  } | null
+  trends: {
+    weeklyGrowth: number
+    monthlyAverage: number
+    peakDayMessages: number
+  }
+  chartData: Array<{
+    date: string
+    messages: number
+    sessions: number
+  }>
+  analytics: {
+    totalDays: number
+    averageSessionsPerDay: number
+    messagesPerSession: number
+    mostActiveDay: string | null
+    consistency: number
+  }
+}
+
 interface StatsData {
   merchant: MerchantData
   subscription: SubscriptionData
@@ -34,6 +84,7 @@ interface StatsData {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData | null>(null)
+  const [dailyStats, setDailyStats] = useState<DailyStatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,16 +102,29 @@ export default function DashboardPage() {
       }
       
       const merchant = JSON.parse(merchantData)
-      const response = await fetch(`/api/merchant/stats/${merchant.id}`)
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      // Fetch both regular stats and daily stats in parallel
+      const [statsResponse, dailyStatsResponse] = await Promise.all([
+        fetch(`/api/merchant/stats/${merchant.id}`),
+        fetch(`/api/merchant/stats/daily/${merchant.id}`)
+      ])
+      
+      if (!statsResponse.ok) {
+        throw new Error(`HTTP ${statsResponse.status}: ${statsResponse.statusText}`)
       }
       
-      const data = await response.json()
+      const data = await statsResponse.json()
       setStats(data)
-      setError(null)
       
+      if (dailyStatsResponse.ok) {
+        const dailyData = await dailyStatsResponse.json()
+        setDailyStats(dailyData)
+        console.log('📊 Daily stats loaded:', dailyData)
+      } else {
+        console.warn('Failed to load daily stats, continuing with regular stats only')
+      }
+      
+      setError(null)
       console.log('📊 Stats loaded:', data)
       
     } catch (err) {
@@ -157,12 +221,37 @@ export default function DashboardPage() {
       )
       .subscribe()
 
+    // Setup real-time subscription for daily usage stats
+    const dailyStatsChannel = supabase
+      .channel('daily-stats-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'DailyUsageStats',
+          filter: `merchantId=eq.${merchant.id}`
+        },
+        (payload) => {
+          console.log('📊 Daily stats update detected:', payload)
+          // Refetch daily stats when they change
+          fetchStats()
+        }
+      )
+      .subscribe((status) => {
+        console.log('📊 Daily stats subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Daily stats real-time subscription established')
+        }
+      })
+
     // Cleanup function
     return () => {
       console.log('🔌 Unsubscribing from real-time channels')
       supabase.removeChannel(subscriptionChannel)
       supabase.removeChannel(merchantChannel)
       supabase.removeChannel(messagesChannel)
+      supabase.removeChannel(dailyStatsChannel)
     }
   }, [router])
 
@@ -580,6 +669,199 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Daily Usage Statistics */}
+        {dailyStats && (
+          <div className="bg-white shadow-lg rounded-lg p-6 mb-6 border-l-4 border-green-500">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                📈 إحصائيات الاستخدام اليومية والشهرية
+                <span className="mr-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-pulse"></div>
+                  Real-time
+                </span>
+              </h2>
+              <div className="text-right">
+                <div className="text-sm text-gray-600">آخر تحديث</div>
+                <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('ar-SA')}</div>
+              </div>
+            </div>
+
+            {/* Today's Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-2">📅 اليوم</h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-blue-700">الرسائل:</span>
+                    <span className="text-lg font-bold text-blue-900">{dailyStats.today.messages}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-blue-700">الجلسات:</span>
+                    <span className="text-sm font-bold text-blue-900">{dailyStats.today.sessions}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 className="font-semibold text-green-900 mb-2">📊 هذا الأسبوع</h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-green-700">المجموع:</span>
+                    <span className="text-lg font-bold text-green-900">{dailyStats.thisWeek.totalMessages}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-green-700">المعدل اليومي:</span>
+                    <span className="text-sm font-bold text-green-900">{dailyStats.thisWeek.dailyAverage}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-green-700">النمو:</span>
+                    <span className={`text-sm font-bold ${
+                      dailyStats.thisWeek.growth >= 0 ? 'text-green-900' : 'text-red-600'
+                    }`}>
+                      {dailyStats.thisWeek.growth >= 0 ? '+' : ''}{dailyStats.thisWeek.growth}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h3 className="font-semibold text-purple-900 mb-2">🗓️ هذا الشهر</h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">المجموع:</span>
+                    <span className="text-lg font-bold text-purple-900">{dailyStats.thisMonth.totalMessages}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">المعدل اليومي:</span>
+                    <span className="text-sm font-bold text-purple-900">{dailyStats.thisMonth.dailyAverage}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">الأيام النشطة:</span>
+                    <span className="text-sm font-bold text-purple-900">{dailyStats.thisMonth.activeDays}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h3 className="font-semibold text-orange-900 mb-2">🎯 الخطة الشهرية</h3>
+                {dailyStats.subscription && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-orange-700">المستخدم:</span>
+                      <span className="text-lg font-bold text-orange-900">{dailyStats.subscription.totalUsed.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-orange-700">المتاح:</span>
+                      <span className="text-sm font-bold text-orange-900">{dailyStats.subscription.totalLimit.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-orange-700">المتبقي:</span>
+                      <span className="text-sm font-bold text-orange-900">{dailyStats.subscription.remainingTotal.toLocaleString()}</span>
+                    </div>
+                    
+                    {/* Monthly Usage Progress Bar */}
+                    <div className="mt-2">
+                      <div className="w-full bg-orange-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            dailyStats.subscription.usagePercentage >= 90 ? 'bg-red-500' :
+                            dailyStats.subscription.usagePercentage >= 75 ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(dailyStats.subscription.usagePercentage, 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-orange-700 mt-1 text-center">
+                        {dailyStats.subscription.usagePercentage}% مستخدم من الخطة الشهرية
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Monthly Analytics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">📊 تحليلات الأداء</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">متوسط الجلسات/يوم:</span>
+                    <span className="text-sm font-bold text-gray-900">{dailyStats.analytics.averageSessionsPerDay}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">رسائل/جلسة:</span>
+                    <span className="text-sm font-bold text-gray-900">{dailyStats.analytics.messagesPerSession}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">معدل النشاط:</span>
+                    <span className="text-sm font-bold text-gray-900">{Math.round(dailyStats.analytics.consistency)}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">🏆 أفضل يوم</h3>
+                {dailyStats.thisMonth.peakDay ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-700">التاريخ:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {new Date(dailyStats.thisMonth.peakDay.date).toLocaleDateString('ar-SA')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-700">الرسائل:</span>
+                      <span className="text-lg font-bold text-green-600">{dailyStats.thisMonth.peakDay.messages}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">لا توجد بيانات</p>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">📈 اتجاهات النمو</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">نمو أسبوعي:</span>
+                    <span className={`text-sm font-bold ${
+                      dailyStats.trends.weeklyGrowth >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {dailyStats.trends.weeklyGrowth >= 0 ? '+' : ''}{dailyStats.trends.weeklyGrowth}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">المعدل الشهري:</span>
+                    <span className="text-sm font-bold text-gray-900">{dailyStats.trends.monthlyAverage}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Chart */}
+            {dailyStats.chartData.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">📊 نشاط آخر 30 يوم</h3>
+                <div className="flex items-end space-x-1 rtl:space-x-reverse h-20">
+                  {dailyStats.chartData.slice(-30).map((day, index) => (
+                    <div
+                      key={day.date}
+                      className="flex-1 bg-blue-500 rounded-t opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+                      style={{ 
+                        height: `${Math.max((day.messages / Math.max(...dailyStats.chartData.map(d => d.messages), 1)) * 100, 2)}%` 
+                      }}
+                      title={`${day.date}: ${day.messages} رسائل`}
+                    ></div>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-600 mt-2 text-center">
+                  آخر 30 يوم - أعلى نشاط: {Math.max(...dailyStats.chartData.map(d => d.messages))} رسائل
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Real-time Usage Analytics */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
