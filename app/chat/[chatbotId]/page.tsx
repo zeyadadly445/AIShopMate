@@ -64,42 +64,46 @@ export default function ChatPage({ params }: ChatPageProps) {
     resolveChatbotId()
   }, [params])
 
-  // Load merchant info and restore chat history
+  // Load merchant info and check limits
   useEffect(() => {
     if (!chatbotId) return
 
     const loadMerchant = async () => {
       try {
+        // 🔒 فحص الحدود أولاً باستخدام API الجديد
+        const limitsResponse = await fetch(`/api/merchant/check-limits/${chatbotId}`)
+        if (limitsResponse.ok) {
+          const limitsData = await limitsResponse.json()
+          
+          // إذا كان لا يمكن استخدام الشات، التوجه للصفحة المناسبة
+          if (!limitsData.canUseChat) {
+            console.log('🚫 Chat access denied:', limitsData.reason)
+            console.log('📊 Limits check:', {
+              daily: limitsData.limits?.daily,
+              monthly: limitsData.limits?.monthly
+            })
+            
+            if (limitsData.redirectTo) {
+              window.location.href = limitsData.redirectTo
+            } else {
+              window.location.href = `/chat/${chatbotId}/limit-reached`
+            }
+            return
+          }
+
+          console.log('✅ Chat access granted:', {
+            dailyUsage: `${limitsData.limits.daily.used}/${limitsData.limits.daily.limit}`,
+            monthlyUsage: `${limitsData.limits.monthly.used}/${limitsData.limits.monthly.limit}`,
+            plan: limitsData.subscription.plan
+          })
+        } else {
+          console.error('Failed to check limits:', limitsResponse.status)
+        }
+
+        // تحميل بيانات التاجر
         const response = await fetch(`/api/merchant/${chatbotId}`)
         if (response.ok) {
           const merchantData = await response.json()
-          
-          // 🔒 فحص حالة الاشتراك قبل السماح بالدخول
-          if (merchantData.subscription) {
-            const subscription = merchantData.subscription
-            
-            // فحص حالة الاشتراك
-            if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
-              console.log('🚫 Redirecting: Subscription inactive -', subscription.status)
-              window.location.href = `/chat/${chatbotId}/limit-reached`
-              return
-            }
-            
-            // فحص حد الرسائل
-            if (subscription.messagesUsed >= subscription.messagesLimit) {
-              console.log('🚫 Redirecting: Message limit reached -', subscription.messagesUsed, '>=', subscription.messagesLimit)
-              window.location.href = `/chat/${chatbotId}/limit-reached`
-              return
-            }
-            
-            console.log('✅ Subscription valid:', {
-              status: subscription.status,
-              used: subscription.messagesUsed,
-              limit: subscription.messagesLimit,
-              remaining: subscription.messagesLimit - subscription.messagesUsed
-            })
-          }
-          
           setMerchant(merchantData)
           
           // Load saved messages from localStorage
@@ -185,6 +189,48 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !merchant || !sessionId) return
+
+    // 🔒 فحص الحدود قبل إرسال الرسالة
+    try {
+      const limitsResponse = await fetch(`/api/merchant/check-limits/${chatbotId}`)
+      if (limitsResponse.ok) {
+        const limitsData = await limitsResponse.json()
+        
+        if (!limitsData.canUseChat) {
+          console.log('🚫 Message blocked - limits exceeded:', limitsData.reason)
+          
+          // عرض رسالة خطأ في الشات
+          const errorMessage: Message = {
+            id: `error_${Date.now()}`,
+            role: 'assistant',
+            content: limitsData.message || 'عذراً، تم تجاوز الحد المسموح من الرسائل.',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, errorMessage])
+          
+          // التوجه لصفحة تجاوز الحد بعد ثانيتين
+          setTimeout(() => {
+            if (limitsData.redirectTo) {
+              window.location.href = limitsData.redirectTo
+            } else {
+              window.location.href = `/chat/${chatbotId}/limit-reached`
+            }
+          }, 2000)
+          
+          return
+        }
+        
+        console.log('✅ Message allowed - limits OK:', {
+          dailyRemaining: limitsData.limits.daily.remaining,
+          monthlyRemaining: limitsData.limits.monthly.remaining
+        })
+      } else {
+        console.warn('⚠️ Could not check limits, proceeding with caution')
+      }
+    } catch (limitsError) {
+      console.error('Error checking limits before sending:', limitsError)
+      // المتابعة مع تحذير إذا فشل فحص الحدود
+    }
 
     const userMessage: Message = {
       id: `user_${Date.now()}`,

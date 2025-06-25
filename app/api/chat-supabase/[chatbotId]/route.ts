@@ -215,16 +215,19 @@ ${conversationHistoryFromDB.slice(-10).map((msg: any) =>
       .rpc('consume_message', { merchant_id: merchant.id })
 
     if (consumeError) {
-      console.error('Error consuming message:', consumeError)
+      console.error('❌ Error consuming message:', consumeError)
+      // لا نُرجع خطأ هنا لأن الرد تم إرساله بالفعل
     } else {
       const result = consumeResult && consumeResult[0]
       if (result && result.success) {
         console.log('✅ Message consumed successfully:', {
           dailyRemaining: result.daily_remaining,
-          monthlyRemaining: result.monthly_remaining
+          monthlyRemaining: result.monthly_remaining,
+          consumptionDetails: result.message
         })
       } else {
         console.warn('⚠️ Message consumption failed:', result?.message)
+        // قد يكون بسبب تجاوز الحدود أو مشكلة أخرى
       }
     }
 
