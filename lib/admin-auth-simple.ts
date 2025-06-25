@@ -130,47 +130,72 @@ export class SimpleAdminAuth {
 
       console.log('📊 Fetching dashboard data for:', session.username)
 
-      // إحصائيات المرشحين (Merchants)
+      // جلب المرشحين أولاً بشكل بسيط
+      console.log('🔍 Fetching merchants...')
       const { data: merchants, error: merchantsError } = await supabaseAdmin
         .from('Merchant')
-        .select(`
-          *,
-          Subscription (
-            id,
-            plan,
-            status,
-            messagesLimit: messages_limit,
-            messagesUsed: messages_used,
-            startDate: start_date,
-            endDate: end_date,
-            createdAt: created_at,
-            updatedAt: updated_at
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (merchantsError) {
         console.error('❌ Error fetching merchants:', merchantsError)
-        throw merchantsError
+        throw new Error(`Merchants fetch error: ${merchantsError.message}`)
       }
+
+      console.log(`✅ Found ${merchants?.length || 0} merchants`)
+
+      // جلب الاشتراكات بشكل منفصل
+      console.log('🔍 Fetching subscriptions...')
+      const { data: subscriptions, error: subscriptionsError } = await supabaseAdmin
+        .from('Subscription')
+        .select('*')
+
+      if (subscriptionsError) {
+        console.error('❌ Error fetching subscriptions:', subscriptionsError)
+        // لا نرمي خطأ هنا، نتابع بدون اشتراكات
+        console.log('⚠️ Continuing without subscriptions data')
+      }
+
+      console.log(`✅ Found ${subscriptions?.length || 0} subscriptions`)
+
+      // ربط الاشتراكات بالمرشحين
+      const merchantsWithSubs = merchants?.map(merchant => {
+        const subscription = subscriptions?.find(sub => sub.merchant_id === merchant.id)
+        return {
+          ...merchant,
+          subscription: subscription ? {
+            id: subscription.id,
+            plan: subscription.plan,
+            status: subscription.status,
+            messagesLimit: subscription.messages_limit,
+            messagesUsed: subscription.messages_used,
+            usagePercentage: Math.round((subscription.messages_used / subscription.messages_limit) * 100),
+            remainingMessages: subscription.messages_limit - subscription.messages_used,
+            startDate: subscription.start_date,
+            endDate: subscription.end_date,
+            createdAt: subscription.created_at,
+            updatedAt: subscription.updated_at
+          } : null
+        }
+      }) || []
 
       // حساب الإحصائيات
       const stats = {
-        totalMerchants: merchants?.length || 0,
-        activeMerchants: merchants?.filter(m => m.Subscription?.[0]?.status === 'ACTIVE').length || 0,
-        trialMerchants: merchants?.filter(m => m.Subscription?.[0]?.status === 'TRIAL').length || 0,
-        newMerchantsThisMonth: merchants?.filter(m => {
+        totalMerchants: merchantsWithSubs.length,
+        activeMerchants: merchantsWithSubs.filter(m => m.subscription?.status === 'ACTIVE').length,
+        trialMerchants: merchantsWithSubs.filter(m => m.subscription?.status === 'TRIAL').length,
+        newMerchantsThisMonth: merchantsWithSubs.filter(m => {
           const createdAt = new Date(m.created_at)
           const now = new Date()
           return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear()
-        }).length || 0,
-        totalMessagesUsed: merchants?.reduce((sum, m) => sum + (m.Subscription?.[0]?.messagesUsed || 0), 0) || 0,
-        limitReachedUsers: merchants?.filter(m => {
-          const sub = m.Subscription?.[0]
+        }).length,
+        totalMessagesUsed: merchantsWithSubs.reduce((sum, m) => sum + (m.subscription?.messagesUsed || 0), 0),
+        limitReachedUsers: merchantsWithSubs.filter(m => {
+          const sub = m.subscription
           return sub && sub.messagesUsed >= sub.messagesLimit
-        }).length || 0,
-        potentialRevenue: merchants?.reduce((sum, m) => {
-          const plan = m.Subscription?.[0]?.plan
+        }).length,
+        potentialRevenue: merchantsWithSubs.reduce((sum, m) => {
+          const plan = m.subscription?.plan
           const planRevenue = {
             'BASIC': 29,
             'STANDARD': 79,
@@ -178,58 +203,45 @@ export class SimpleAdminAuth {
             'ENTERPRISE': 299
           }
           return sum + (planRevenue[plan as keyof typeof planRevenue] || 0)
-        }, 0) || 0,
+        }, 0),
         totalConversations: 0 // سيتم حسابها لاحقاً
       }
 
       // أعلى المستخدمين استخداماً
-      const topUsers = merchants
-        ?.filter(m => m.Subscription?.[0])
+      const topUsers = merchantsWithSubs
+        .filter(m => m.subscription)
         .map(m => {
-          const sub = m.Subscription[0]
+          const sub = m.subscription!
           return {
             id: m.id,
             businessName: m.business_name,
             email: m.email,
             messagesUsed: sub.messagesUsed,
             messagesLimit: sub.messagesLimit,
-            usagePercentage: Math.round((sub.messagesUsed / sub.messagesLimit) * 100),
+            usagePercentage: sub.usagePercentage,
             plan: sub.plan,
             status: sub.status,
             createdAt: m.created_at
           }
         })
         .sort((a, b) => b.messagesUsed - a.messagesUsed)
-        .slice(0, 10) || []
+        .slice(0, 10)
 
-      // تنسيق بيانات المرشحين
-      const formattedMerchants = merchants?.map(m => {
-        const sub = m.Subscription?.[0]
-        return {
-          id: m.id,
-          email: m.email,
-          businessName: m.business_name,
-          phone: m.phone,
-          chatbotId: m.chatbot_id,
-          welcomeMessage: m.welcome_message,
-          primaryColor: m.primary_color,
-          createdAt: m.created_at,
-          updatedAt: m.updated_at,
-          subscription: sub ? {
-            id: sub.id,
-            plan: sub.plan,
-            status: sub.status,
-            messagesLimit: sub.messagesLimit,
-            messagesUsed: sub.messagesUsed,
-            usagePercentage: Math.round((sub.messagesUsed / sub.messagesLimit) * 100),
-            remainingMessages: sub.messagesLimit - sub.messagesUsed,
-            startDate: sub.startDate,
-            endDate: sub.endDate,
-            createdAt: sub.createdAt,
-            updatedAt: sub.updatedAt
-          } : null
-        }
-      }) || []
+      // تنسيق بيانات المرشحين للعرض
+      const formattedMerchants = merchantsWithSubs.map(m => ({
+        id: m.id,
+        email: m.email,
+        businessName: m.business_name,
+        phone: m.phone,
+        chatbotId: m.chatbot_id,
+        welcomeMessage: m.welcome_message,
+        primaryColor: m.primary_color,
+        createdAt: m.created_at,
+        updatedAt: m.updated_at,
+        subscription: m.subscription
+      }))
+
+      console.log('✅ Dashboard data prepared successfully')
 
       return {
         stats,
@@ -245,7 +257,7 @@ export class SimpleAdminAuth {
       }
 
     } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error)
+      console.error('❌ Error in getDashboardData:', error)
       throw error
     }
   }

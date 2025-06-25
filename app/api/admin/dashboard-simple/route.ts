@@ -27,17 +27,57 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Session valid, fetching dashboard data')
 
-    const dashboardData = await SimpleAdminAuth.getDashboardData(session)
+    try {
+      const dashboardData = await SimpleAdminAuth.getDashboardData(session)
+      console.log('✅ Dashboard data fetched successfully')
 
-    return NextResponse.json({
-      success: true,
-      ...dashboardData
-    })
+      return NextResponse.json({
+        success: true,
+        ...dashboardData
+      })
+    } catch (dataError) {
+      console.error('❌ Error fetching dashboard data:', dataError)
+      
+      // إرجاع بيانات تجريبية إذا فشلت قاعدة البيانات
+      const fallbackData = {
+        stats: {
+          totalMerchants: 0,
+          activeMerchants: 0,
+          trialMerchants: 0,
+          newMerchantsThisMonth: 0,
+          totalMessagesUsed: 0,
+          limitReachedUsers: 0,
+          potentialRevenue: 0,
+          totalConversations: 0
+        },
+        merchants: [],
+        topUsers: [],
+        lastUpdated: new Date().toISOString(),
+        adminSession: {
+          username: session.username,
+          loginTime: session.loginTime,
+          adminId: session.adminId,
+          dbId: session.dbId
+        }
+      }
+
+      console.log('📊 Returning fallback data due to database error')
+      
+      return NextResponse.json({
+        success: true,
+        ...fallbackData,
+        warning: 'البيانات محدودة بسبب مشكلة في قاعدة البيانات'
+      })
+    }
 
   } catch (error) {
-    console.error('❌ Dashboard API error:', error)
+    console.error('❌ Dashboard API critical error:', error)
     return NextResponse.json(
-      { success: false, error: 'خطأ في جلب البيانات' },
+      { 
+        success: false, 
+        error: 'خطأ في الخادم', 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
