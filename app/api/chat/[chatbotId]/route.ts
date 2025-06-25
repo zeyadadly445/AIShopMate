@@ -52,11 +52,7 @@ export async function POST(
         businessName,
         welcomeMessage,
         primaryColor,
-        subscription:Subscription(
-          messagesLimit,
-          messagesUsed,
-          status
-        )
+        isActive
       `)
       .eq('chatbotId', chatbotId)
       .single()
@@ -71,53 +67,46 @@ export async function POST(
     
     console.log('✅ Merchant found:', merchant.businessName)
 
-    // 5. Check subscription limits with detailed responses
-    const subscription = Array.isArray(merchant.subscription) 
-      ? merchant.subscription[0] 
-      : merchant.subscription
+    // التحقق من حالة التاجر
+    if (!merchant.isActive) {
+      return NextResponse.json(
+        { 
+          response: 'عذراً، الخدمة غير متاحة حالياً. يرجى المحاولة لاحقاً.',
+          reason: 'merchant_inactive'
+        },
+        { status: 403 }
+      )
+    }
 
-    if (subscription) {
-      if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') {
-        console.log('❌ Subscription not active:', subscription.status)
-        return NextResponse.json({
-          error: 'subscription_inactive',
-          response: 'عذراً، انتهت صلاحية الاشتراك. يرجى التواصل مع صاحب المتجر.',
-          redirectTo: `/chat/${chatbotId}/limit-reached`
-        }, { status: 403 })
-      }
+    // 5. فحص الحدود باستخدام الدالة الجديدة
+    const { data: limitsCheck, error: limitsError } = await supabaseAdmin
+      .rpc('check_message_limits', { merchant_id: merchant.id })
 
-      if (subscription.messagesUsed >= subscription.messagesLimit) {
-        console.log('❌ Message limit reached:', {
-          used: subscription.messagesUsed,
-          limit: subscription.messagesLimit
-        })
-        return NextResponse.json({
-          error: 'limit_reached',
-          response: 'عذراً، تم استنفاد حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
+    if (limitsError) {
+      console.error('Error checking limits:', limitsError)
+      return NextResponse.json(
+        { error: 'Failed to check subscription limits' },
+        { status: 500 }
+      )
+    }
+
+    const limits = limitsCheck && limitsCheck[0]
+    if (!limits || !limits.can_send) {
+      console.log('🚫 Message limit reached:', limits?.reason)
+      return NextResponse.json(
+        { 
+          response: limits?.reason === 'تم تجاوز الحد اليومي' 
+            ? 'عذراً، تم تجاوز الحد اليومي للرسائل. يمكنك المحاولة غداً.' 
+            : 'عذراً، تم تجاوز حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
           redirectTo: `/chat/${chatbotId}/limit-reached`,
-          usage: {
-            used: subscription.messagesUsed,
-            limit: subscription.messagesLimit,
-            percentage: Math.round((subscription.messagesUsed / subscription.messagesLimit) * 100)
+          reason: limits?.reason === 'تم تجاوز الحد اليومي' ? 'daily_limit_reached' : 'monthly_limit_reached',
+          limits: {
+            daily_remaining: limits?.daily_remaining || 0,
+            monthly_remaining: limits?.monthly_remaining || 0
           }
-        }, { status: 403 })
-      }
-
-      // Log usage for monitoring
-      const usagePercentage = Math.round((subscription.messagesUsed / subscription.messagesLimit) * 100)
-      console.log('📊 Current usage:', {
-        used: subscription.messagesUsed,
-        limit: subscription.messagesLimit,
-        percentage: usagePercentage,
-        remaining: subscription.messagesLimit - subscription.messagesUsed
-      })
-      
-      // Warning when approaching limit
-      if (usagePercentage >= 90) {
-        console.log('⚠️ HIGH USAGE WARNING: Near message limit!')
-      } else if (usagePercentage >= 75) {
-        console.log('⚠️ MEDIUM USAGE WARNING: 75% of messages used')
-      }
+        },
+        { status: 403 }
+      )
     }
 
     // 6. Prepare AI context with conversation history from frontend
@@ -130,36 +119,35 @@ export async function POST(
 
     // 7. Generate AI response
     if (stream) {
-      // Return streaming response (no database saving)
-      return await generateStreamingResponse(message, businessContext, recentHistory, subscription, merchant)
+      // Return streaming response 
+      return await generateStreamingResponse(message, businessContext, recentHistory, merchant)
     } else {
-      // Return regular response (no database saving)
+      // Return regular response
       const aiResponse = await generateRegularResponse(message, businessContext, recentHistory)
 
-      // Update message count only (no conversation saving)
-      if (subscription) {
-        await supabaseAdmin
-          .from('Subscription')
-          .update({ messagesUsed: subscription.messagesUsed + 1 })
-          .eq('merchantId', merchant.id)
-      }
+      // استهلاك رسالة واحدة باستخدام الدالة الجديدة
+      const { data: consumeResult, error: consumeError } = await supabaseAdmin
+        .rpc('consume_message', { merchant_id: merchant.id })
 
-      // Update daily usage statistics for regular response
-      try {
-        const { error: dailyStatsError } = await supabaseAdmin
-          .rpc('increment_daily_usage', {
-            merchant_id: merchant.id,
-            session_id: sessionId || 'regular_session_' + Date.now()
+      if (consumeError) {
+        console.error('❌ Error consuming message:', consumeError)
+      } else {
+        const result = consumeResult && consumeResult[0]
+        if (result && result.success) {
+          console.log('✅ Message consumed successfully:', {
+            dailyRemaining: result.daily_remaining,
+            monthlyRemaining: result.monthly_remaining
           })
-
-        if (!dailyStatsError) {
-          console.log('📊 Daily stats updated for merchant:', merchant.id)
         }
-      } catch (dailyStatsError) {
-        console.error('Error updating daily stats:', dailyStatsError)
       }
 
-      return NextResponse.json({ response: aiResponse })
+      return NextResponse.json({ 
+        response: aiResponse,
+        usage: consumeResult && consumeResult[0] ? {
+          daily_remaining: consumeResult[0].daily_remaining,
+          monthly_remaining: consumeResult[0].monthly_remaining
+        } : undefined
+      })
     }
 
   } catch (error) {
@@ -178,7 +166,6 @@ async function generateStreamingResponse(
   message: string, 
   context: string, 
   conversationHistory: any[],
-  subscription: any,
   merchant: any
 ): Promise<Response> {
   console.log('🌊 Starting streaming response (Local Storage Mode)...')
@@ -303,27 +290,22 @@ async function generateStreamingResponse(
               console.log(`⚠️ Delays over 1000ms: ${delayCount}`)
               console.log(`🔤 Final response length: ${accumulatedContent.length} characters`)
               
-              // Update message count only (no conversation saving)
-              if (subscription && accumulatedContent.trim()) {
-                await supabaseAdmin
-                  .from('Subscription')
-                  .update({ messagesUsed: subscription.messagesUsed + 1 })
-                  .eq('merchantId', merchant.id)
-                console.log('📊 Message count updated')
+              // استهلاك رسالة واحدة بعد اكتمال الرد
+              if (accumulatedContent.trim()) {
+                const { data: consumeResult, error: consumeError } = await supabaseAdmin
+                  .rpc('consume_message', { merchant_id: merchant.id })
 
-                // Update daily usage statistics for streaming response
-                try {
-                  const { error: dailyStatsError } = await supabaseAdmin
-                    .rpc('increment_daily_usage', {
-                      merchant_id: merchant.id,
-                      session_id: 'streaming_session_' + Date.now()
+                if (consumeError) {
+                  console.error('❌ Error consuming message:', consumeError)
+                } else {
+                  const result = consumeResult && consumeResult[0]
+                  if (result && result.success) {
+                    console.log('✅ Message consumed successfully:', {
+                      dailyRemaining: result.daily_remaining,
+                      monthlyRemaining: result.monthly_remaining,
+                      consumptionDetails: result.message
                     })
-
-                  if (!dailyStatsError) {
-                    console.log('📊 Daily stats updated for streaming response:', merchant.id)
                   }
-                } catch (dailyStatsError) {
-                  console.error('Error updating daily stats in streaming:', dailyStatsError)
                 }
               }
               
