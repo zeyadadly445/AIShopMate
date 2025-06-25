@@ -69,14 +69,14 @@ export async function GET(
     const conversations = merchant.Conversation || []
     const dataSources = merchant.DataSource || []
     
-    const totalMessages = conversations.reduce((sum, conv) => sum + (conv.Message?.length || 0), 0)
-    const totalFileSize = dataSources.reduce((sum, ds) => sum + (ds.file_size || 0), 0)
-    const totalChunks = dataSources.reduce((sum, ds) => sum + (ds.chunk_count || 0), 0)
+    const totalMessages = conversations.reduce((sum: number, conv: any) => sum + (conv.Message?.length || 0), 0)
+    const totalFileSize = dataSources.reduce((sum: number, ds: any) => sum + (ds.file_size || 0), 0)
+    const totalChunks = dataSources.reduce((sum: number, ds: any) => sum + (ds.chunk_count || 0), 0)
 
     // حساب النشاط الأخير
     const allDates = [
-      ...conversations.map(c => c.updated_at),
-      ...dataSources.map(ds => ds.created_at)
+      ...conversations.map((c: any) => c.updated_at),
+      ...dataSources.map((ds: any) => ds.created_at)
     ].filter(Boolean).sort().reverse()
 
     const formattedMerchant = {
@@ -102,14 +102,14 @@ export async function GET(
         createdAt: subscription.created_at,
         updatedAt: subscription.updated_at
       } : null,
-      conversations: conversations.map(conv => ({
+      conversations: conversations.map((conv: any) => ({
         id: conv.id,
         messageCount: conv.Message?.length || 0,
-        lastMessage: conv.Message?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())?.[0],
+        lastMessage: conv.Message?.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())?.[0],
         createdAt: conv.created_at,
         updatedAt: conv.updated_at
       })),
-      dataSources: dataSources.map(ds => ({
+      dataSources: dataSources.map((ds: any) => ({
         id: ds.id,
         sourceType: ds.source_type,
         name: ds.name,
@@ -276,7 +276,7 @@ export async function DELETE(
           .from('Conversation')
           .select('id')
           .eq('merchant_id', params.merchantId)
-          .then(({ data }) => data?.map(c => c.id) || [])
+          .then(({ data }) => data?.map((c: any) => c.id) || [])
       )
 
     // 2. حذف المحادثات
