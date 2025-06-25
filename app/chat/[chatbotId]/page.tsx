@@ -64,42 +64,12 @@ export default function ChatPage({ params }: ChatPageProps) {
     resolveChatbotId()
   }, [params])
 
-  // Load merchant info and check limits
+  // Load merchant info and check basic availability
   useEffect(() => {
     if (!chatbotId) return
 
     const loadMerchant = async () => {
       try {
-        // 🔒 فحص الحدود أولاً باستخدام API الجديد
-        const limitsResponse = await fetch(`/api/merchant/check-limits/${chatbotId}`)
-        if (limitsResponse.ok) {
-          const limitsData = await limitsResponse.json()
-          
-          // إذا كان لا يمكن استخدام الشات، التوجه للصفحة المناسبة
-          if (!limitsData.canUseChat) {
-            console.log('🚫 Chat access denied:', limitsData.reason)
-            console.log('📊 Limits check:', {
-              daily: limitsData.limits?.daily,
-              monthly: limitsData.limits?.monthly
-            })
-            
-            if (limitsData.redirectTo) {
-              window.location.href = limitsData.redirectTo
-            } else {
-              window.location.href = `/chat/${chatbotId}/limit-reached`
-            }
-            return
-          }
-
-          console.log('✅ Chat access granted:', {
-            dailyUsage: `${limitsData.limits.daily.used}/${limitsData.limits.daily.limit}`,
-            monthlyUsage: `${limitsData.limits.monthly.used}/${limitsData.limits.monthly.limit}`,
-            plan: limitsData.subscription.plan
-          })
-        } else {
-          console.error('Failed to check limits:', limitsResponse.status)
-        }
-
         // تحميل بيانات التاجر
         const response = await fetch(`/api/merchant/${chatbotId}`)
         if (response.ok) {
@@ -190,48 +160,6 @@ export default function ChatPage({ params }: ChatPageProps) {
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !merchant || !sessionId) return
 
-    // 🔒 فحص الحدود قبل إرسال الرسالة
-    try {
-      const limitsResponse = await fetch(`/api/merchant/check-limits/${chatbotId}`)
-      if (limitsResponse.ok) {
-        const limitsData = await limitsResponse.json()
-        
-        if (!limitsData.canUseChat) {
-          console.log('🚫 Message blocked - limits exceeded:', limitsData.reason)
-          
-          // عرض رسالة خطأ في الشات
-          const errorMessage: Message = {
-            id: `error_${Date.now()}`,
-            role: 'assistant',
-            content: limitsData.message || 'عذراً، تم تجاوز الحد المسموح من الرسائل.',
-            timestamp: new Date()
-          }
-          setMessages(prev => [...prev, errorMessage])
-          
-          // التوجه لصفحة تجاوز الحد بعد ثانيتين
-          setTimeout(() => {
-            if (limitsData.redirectTo) {
-              window.location.href = limitsData.redirectTo
-            } else {
-              window.location.href = `/chat/${chatbotId}/limit-reached`
-            }
-          }, 2000)
-          
-          return
-        }
-        
-        console.log('✅ Message allowed - limits OK:', {
-          dailyRemaining: limitsData.limits.daily.remaining,
-          monthlyRemaining: limitsData.limits.monthly.remaining
-        })
-      } else {
-        console.warn('⚠️ Could not check limits, proceeding with caution')
-      }
-    } catch (limitsError) {
-      console.error('Error checking limits before sending:', limitsError)
-      // المتابعة مع تحذير إذا فشل فحص الحدود
-    }
-
     const userMessage: Message = {
       id: `user_${Date.now()}`,
       role: 'user',
@@ -289,37 +217,25 @@ export default function ChatPage({ params }: ChatPageProps) {
 
       // Handle API response
       if (!response.ok) {
-        if (response.status === 403) {
-          // Handle subscription limits
-          try {
-            const errorData = await response.json()
-            console.log('❌ Subscription limit error:', errorData)
-            
-            if (errorData.redirectTo) {
-              // Redirect to limit reached page
-              console.log('🔄 Redirecting to:', errorData.redirectTo)
-              window.location.href = errorData.redirectTo
-              return
-            }
-            
-            // Show error message in chat
-            const errorMessage: Message = {
-              id: `error_${Date.now()}`,
-              role: 'assistant',
-              content: errorData.response || 'عذراً، تم الوصول للحد المسموح من الرسائل.',
-              timestamp: new Date()
-            }
-            setMessages(prev => [...prev, errorMessage])
-          } catch (parseError) {
-            console.error('Error parsing 403 response:', parseError)
-            const errorMessage: Message = {
-              id: `error_${Date.now()}`,
-              role: 'assistant',
-              content: 'عذراً، تم الوصول للحد المسموح من الرسائل.',
-              timestamp: new Date()
-            }
-            setMessages(prev => [...prev, errorMessage])
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      // التحقق إذا كان الرد يحتوي على رسالة حد
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const jsonResponse = await response.json()
+        
+        if (jsonResponse.isLimitReached) {
+          console.log('📝 Limit message received:', jsonResponse.response)
+          
+          // إضافة رسالة الحد كرد من الشات بوت
+          const limitMessage: Message = {
+            id: `limit_${Date.now()}`,
+            role: 'assistant',
+            content: jsonResponse.response,
+            timestamp: new Date()
           }
+          setMessages(prev => [...prev, limitMessage])
           
           setIsLoading(false)
           setIsStreaming(false)
@@ -327,9 +243,24 @@ export default function ChatPage({ params }: ChatPageProps) {
           return
         }
         
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        // إذا كان JSON response عادي (غير streaming)
+        if (jsonResponse.response) {
+          const assistantMessage: Message = {
+            id: `assistant_${Date.now()}`,
+            role: 'assistant',
+            content: jsonResponse.response,
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, assistantMessage])
+          
+          setIsLoading(false)
+          setIsStreaming(false)
+          setStreamingMessage('')
+          return
+        }
       }
 
+      // معالجة الـ streaming response العادي
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let accumulatedMessage = ''

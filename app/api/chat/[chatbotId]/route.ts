@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { detectLanguage, generateLimitMessage } from '@/lib/language-detector'
 
 export async function POST(
   request: NextRequest,
@@ -93,20 +94,23 @@ export async function POST(
     const limits = limitsCheck && limitsCheck[0]
     if (!limits || !limits.can_send) {
       console.log('🚫 Message limit reached:', limits?.reason)
-      return NextResponse.json(
-        { 
-          response: limits?.reason === 'تم تجاوز الحد اليومي' 
-            ? 'عذراً، تم تجاوز الحد اليومي للرسائل. يمكنك المحاولة غداً.' 
-            : 'عذراً، تم تجاوز حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.',
-          redirectTo: `/chat/${chatbotId}/limit-reached`,
-          reason: limits?.reason === 'تم تجاوز الحد اليومي' ? 'daily_limit_reached' : 'monthly_limit_reached',
-          limits: {
-            daily_remaining: limits?.daily_remaining || 0,
-            monthly_remaining: limits?.monthly_remaining || 0
-          }
-        },
-        { status: 403 }
-      )
+      
+      // اكتشاف لغة الرسالة المرسلة
+      const userLanguage = detectLanguage(message)
+      
+      // تحديد نوع الحد المتجاوز وإنتاج الرسالة المناسبة
+      const limitType = limits?.reason === 'تم تجاوز الحد اليومي' ? 'daily' : 'monthly'
+      const limitMessage = generateLimitMessage(limitType, userLanguage, merchant.businessName)
+      
+      console.log('📝 Returning limit message in', userLanguage, 'language:', limitMessage)
+      
+      // إرجاع رسالة شات بوت بدلاً من redirect
+      return NextResponse.json({ 
+        response: limitMessage,
+        isLimitReached: true,
+        limitType: limitType,
+        language: userLanguage
+      })
     }
 
     // 6. Prepare AI context with conversation history from frontend

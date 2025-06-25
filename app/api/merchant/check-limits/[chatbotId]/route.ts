@@ -64,9 +64,9 @@ export async function GET(
 
     const stats = usageStats && usageStats[0]
 
-    // 5. تحديد حالة الوصول
+    // 5. تحديد حالة الوصول (للمعلومات فقط)
     const result = {
-      canUseChat: limits.can_send,
+      canUseChat: true, // دائماً true لأن الفحص سيحدث في Chat API
       merchant: {
         id: merchant.id,
         businessName: merchant.businessName,
@@ -90,13 +90,15 @@ export async function GET(
         plan: stats?.plan || 'UNKNOWN',
         status: stats?.status || 'UNKNOWN'
       },
-      reason: limits.reason || null,
-      message: limits.can_send 
-        ? 'يمكن استخدام الشات'
-        : (limits.reason === 'تم تجاوز الحد اليومي' 
-          ? 'تم تجاوز الحد اليومي للرسائل. يمكنك المحاولة غداً.'
-          : 'تم تجاوز حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.'),
-      redirectTo: limits.can_send ? null : `/chat/${chatbotId}/limit-reached`,
+      actualLimitStatus: {
+        canSend: limits.can_send,
+        reason: limits.reason || null,
+        message: limits.can_send 
+          ? 'يمكن استخدام الشات'
+          : (limits.reason === 'تم تجاوز الحد اليومي' 
+            ? 'تم تجاوز الحد اليومي للرسائل. يمكنك المحاولة غداً.'
+            : 'تم تجاوز حد الرسائل المسموح. يرجى التواصل مع صاحب المتجر.')
+      },
       timestamp: new Date().toISOString()
     }
 
