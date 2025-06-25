@@ -8,20 +8,21 @@ export async function GET(request: NextRequest) {
     status: 'ready',
     testUrl: 'Use POST method with JSON body',
     requiredFields: ['email', 'password', 'businessName', 'chatbotId'],
-    optionalFields: ['phone'],
+    optionalFields: ['phone', 'timezone'],
     example: {
       email: 'test@example.com',
       password: 'password123',
       businessName: 'My Store',
       chatbotId: 'mystore',
-      phone: '+1234567890'
+      phone: '+1234567890',
+      timezone: 'Asia/Dubai'
     }
   })
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, businessName, chatbotId, phone } = await request.json()
+    const { email, password, businessName, chatbotId, phone, timezone } = await request.json()
 
     // Validation
     if (!email || !password || !businessName || !chatbotId) {
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
       businessName,
       chatbotId,
       phone: phone || null,
+      timezone: timezone || 'UTC',
       welcomeMessage: 'أهلاً بك! كيف يمكنني مساعدتك اليوم؟',
       primaryColor: '#007bff'
     }
@@ -137,7 +139,11 @@ export async function POST(request: NextRequest) {
       plan: 'BASIC',
       status: 'TRIAL',
       messagesLimit: 1000,
-      messagesUsed: 0
+      messagesUsed: 0,
+      dailyMessagesLimit: 50,
+      dailyMessagesUsed: 0,
+      lastDailyReset: new Date().toISOString().split('T')[0],
+      lastDailyResetTimezone: new Date().toISOString()
     }
 
     const createSubscriptionResponse = await fetch(`${supabaseUrl}/rest/v1/Subscription`, {

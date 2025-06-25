@@ -44,7 +44,7 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // 4. Get merchant data (for business context only)
+    // 4. Get merchant data with timezone (for business context only)
     console.log('🔍 Getting merchant data...')
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
@@ -53,7 +53,8 @@ export async function POST(
         businessName,
         welcomeMessage,
         primaryColor,
-        isActive
+        isActive,
+        timezone
       `)
       .eq('chatbotId', chatbotId)
       .single()
@@ -67,6 +68,7 @@ export async function POST(
     }
     
     console.log('✅ Merchant found:', merchant.businessName)
+    console.log('🕐 Merchant timezone:', merchant.timezone || 'UTC')
 
     // التحقق من حالة التاجر
     if (!merchant.isActive) {
@@ -98,18 +100,26 @@ export async function POST(
       // اكتشاف لغة الرسالة المرسلة
       const userLanguage = detectLanguage(message)
       
-      // تحديد نوع الحد المتجاوز وإنتاج الرسالة المناسبة
+      // تحديد نوع الحد المتجاوز وإنتاج الرسالة المناسبة مع المنطقة الزمنية
       const limitType = limits?.reason === 'تم تجاوز الحد اليومي' ? 'daily' : 'monthly'
-      const limitMessage = generateLimitMessage(limitType, userLanguage, merchant.businessName)
+      const limitMessage = generateLimitMessage(
+        limitType, 
+        userLanguage, 
+        merchant.businessName,
+        undefined,
+        merchant.timezone || 'UTC'
+      )
       
       console.log('📝 Returning limit message in', userLanguage, 'language:', limitMessage)
+      console.log('🕐 Using timezone:', merchant.timezone || 'UTC')
       
       // إرجاع رسالة شات بوت بدلاً من redirect
       return NextResponse.json({ 
         response: limitMessage,
         isLimitReached: true,
         limitType: limitType,
-        language: userLanguage
+        language: userLanguage,
+        timezone: merchant.timezone || 'UTC'
       })
     }
 

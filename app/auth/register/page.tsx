@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
+import { detectUserTimezone, POPULAR_TIMEZONES, formatTimezoneInfo } from '@/lib/timezone-detector'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -14,13 +15,28 @@ export default function RegisterPage() {
     confirmPassword: '',
     businessName: '',
     chatbotId: '',
-    phone: ''
+    phone: '',
+    timezone: 'UTC'
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [idAvailable, setIdAvailable] = useState<boolean | null>(null)
   const [checkingId, setCheckingId] = useState(false)
+  const [timezoneDetected, setTimezoneDetected] = useState(false)
+  const [showTimezoneSelector, setShowTimezoneSelector] = useState(false)
   const router = useRouter()
+
+  // اكتشاف المنطقة الزمنية تلقائياً عند تحميل الصفحة
+  useEffect(() => {
+    try {
+      const timezoneInfo = detectUserTimezone()
+      setFormData(prev => ({ ...prev, timezone: timezoneInfo.timezone }))
+      setTimezoneDetected(true)
+    } catch (error) {
+      console.error('فشل في اكتشاف المنطقة الزمنية:', error)
+      setFormData(prev => ({ ...prev, timezone: 'UTC' }))
+    }
+  }, [])
 
   const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }))
@@ -29,6 +45,11 @@ export default function RegisterPage() {
     if (field === 'chatbotId') {
       setIdAvailable(null)
     }
+  }
+
+  const handleTimezoneChange = (timezone: string) => {
+    setFormData(prev => ({ ...prev, timezone }))
+    setShowTimezoneSelector(false)
   }
 
   const checkIdAvailability = async () => {
@@ -79,7 +100,8 @@ export default function RegisterPage() {
           password: formData.password,
           businessName: formData.businessName,
           chatbotId: formData.chatbotId,
-          phone: formData.phone
+          phone: formData.phone,
+          timezone: formData.timezone
         })
       })
 
@@ -205,6 +227,55 @@ export default function RegisterPage() {
                 </svg>
               }
             />
+
+            {/* منطقة زمنية */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                المنطقة الزمنية
+                {timezoneDetected && (
+                  <span className="text-xs text-green-600 mr-2">(تم اكتشافها تلقائياً)</span>
+                )}
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowTimezoneSelector(!showTimezoneSelector)}
+                  className="w-full text-right bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-900">
+                      {POPULAR_TIMEZONES.find(tz => tz.value === formData.timezone)?.label || formData.timezone}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
+                
+                {showTimezoneSelector && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {POPULAR_TIMEZONES.map((tz) => (
+                      <button
+                        key={tz.value}
+                        type="button"
+                        onClick={() => handleTimezoneChange(tz.value)}
+                        className={`w-full text-right px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-b-0 ${
+                          formData.timezone === tz.value ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-medium">{tz.label}</div>
+                          <div className="text-xs text-gray-500">{formatTimezoneInfo(tz.value)}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-600">
+                سيتم تجديد الحد اليومي للرسائل في منتصف الليل حسب توقيتك المحلي
+              </p>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <Input

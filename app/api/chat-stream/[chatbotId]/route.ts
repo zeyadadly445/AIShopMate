@@ -29,7 +29,7 @@ export async function POST(
       )
     }
 
-    // 1. Get merchant information
+    // 1. Get merchant information with timezone
     const { data: merchant, error: merchantError } = await supabaseAdmin
       .from('Merchant')
       .select(`
@@ -38,6 +38,7 @@ export async function POST(
         welcomeMessage,
         primaryColor,
         isActive,
+        timezone,
         dataSources:MerchantDataSource(
           type,
           title,
@@ -57,6 +58,7 @@ export async function POST(
     }
 
     console.log('✅ Merchant found:', merchant.businessName)
+    console.log('🕐 Merchant timezone:', merchant.timezone || 'UTC')
 
     // التحقق من حالة التاجر
     if (!merchant.isActive) {
@@ -88,18 +90,26 @@ export async function POST(
       // اكتشاف لغة الرسالة المرسلة
       const userLanguage = detectLanguage(message)
       
-      // تحديد نوع الحد المتجاوز وإنتاج الرسالة المناسبة
+      // تحديد نوع الحد المتجاوز وإنتاج الرسالة المناسبة مع المنطقة الزمنية
       const limitType = limits?.reason === 'تم تجاوز الحد اليومي' ? 'daily' : 'monthly'
-      const limitMessage = generateLimitMessage(limitType, userLanguage, merchant.businessName)
+      const limitMessage = generateLimitMessage(
+        limitType, 
+        userLanguage, 
+        merchant.businessName,
+        undefined,
+        merchant.timezone || 'UTC'
+      )
       
       console.log('📝 Returning limit message in', userLanguage, 'language:', limitMessage)
+      console.log('🕐 Merchant timezone:', merchant.timezone || 'UTC')
       
       // إرجاع رسالة شات بوت بدلاً من redirect
       return NextResponse.json({ 
         response: limitMessage,
         isLimitReached: true,
         limitType: limitType,
-        language: userLanguage
+        language: userLanguage,
+        timezone: merchant.timezone || 'UTC'
       })
     }
 

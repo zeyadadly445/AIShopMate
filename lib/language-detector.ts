@@ -65,54 +65,92 @@ export function detectLanguage(message: string): SupportedLanguage {
   return 'en'
 }
 
+/**
+ * حساب الوقت المتبقي حتى منتصف الليل في المنطقة الزمنية المحددة
+ */
+export function getTimeUntilMidnight(timezone: string): {
+  hours: number;
+  minutes: number;
+  totalHours: number;
+} {
+  try {
+    const now = new Date();
+    
+    // الوقت الحالي في المنطقة الزمنية المحددة
+    const currentTimeInZone = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    
+    // منتصف الليل التالي في نفس المنطقة الزمنية
+    const nextMidnight = new Date(currentTimeInZone);
+    nextMidnight.setHours(24, 0, 0, 0);
+    
+    const diffMs = nextMidnight.getTime() - currentTimeInZone.getTime();
+    const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { hours, minutes, totalHours };
+  } catch {
+    return { hours: 0, minutes: 0, totalHours: 0 };
+  }
+}
+
 export function generateLimitMessage(
   reason: 'daily' | 'monthly', 
   language: SupportedLanguage,
-  businessName?: string
+  businessName?: string,
+  hoursUntilReset?: number,
+  timezone?: string
 ): string {
+  // حساب الوقت المتبقي إذا تم توفير المنطقة الزمنية
+  let timeInfo = '';
+  if (reason === 'daily' && timezone) {
+    const { totalHours } = getTimeUntilMidnight(timezone);
+    timeInfo = totalHours > 0 ? ` (سيتم التجديد خلال ${totalHours} ساعة تقريباً)` : '';
+  }
+  
   const messages = {
     ar: {
-      daily: `تم تجاوز الحد اليومي من الرسائل لهذا المتجر حسب اشتراكه. يمكنك المحاولة مرة أخرى غداً. 🕐`,
+      daily: `تم تجاوز الحد اليومي من الرسائل لهذا المتجر حسب اشتراكه${timeInfo}. يمكنك المحاولة مرة أخرى غداً. 🕐`,
       monthly: `تم تجاوز الحد الشهري من الرسائل لهذا المتجر حسب اشتراكه. يرجى التواصل مع إدارة المتجر. 📞`
     },
     en: {
-      daily: `Daily message limit reached for this store according to its subscription. Please try again tomorrow. 🕐`,
+      daily: `Daily message limit reached for this store according to its subscription${timezone ? ` (resets in ~${getTimeUntilMidnight(timezone).totalHours} hours)` : ''}. Please try again tomorrow. 🕐`,
       monthly: `Monthly message limit reached for this store according to its subscription. Please contact the store management. 📞`
     },
     fr: {
-      daily: `Limite de messages quotidiens atteinte pour ce magasin selon son abonnement. Veuillez réessayer demain. 🕐`,
+      daily: `Limite de messages quotidiens atteinte pour ce magasin selon son abonnement${timezone ? ` (réinitialisation dans ~${getTimeUntilMidnight(timezone).totalHours} heures)` : ''}. Veuillez réessayer demain. 🕐`,
       monthly: `Limite de messages mensuels atteinte pour ce magasin selon son abonnement. Veuillez contacter la direction du magasin. 📞`
     },
     de: {
-      daily: `Tägliches Nachrichtenlimit für diesen Shop gemäß seinem Abonnement erreicht. Bitte versuchen Sie es morgen erneut. 🕐`,
+      daily: `Tägliches Nachrichtenlimit für diesen Shop gemäß seinem Abonnement erreicht${timezone ? ` (Reset in ~${getTimeUntilMidnight(timezone).totalHours} Stunden)` : ''}. Bitte versuchen Sie es morgen erneut. 🕐`,
       monthly: `Monatliches Nachrichtenlimit für diesen Shop gemäß seinem Abonnement erreicht. Bitte kontaktieren Sie die Shop-Verwaltung. 📞`
     },
     hi: {
-      daily: `इस स्टोर के लिए दैनिक संदेश सीमा उसकी सदस्यता के अनुसार पहुंच गई है। कृपया कल फिर से कोशिश करें। 🕐`,
+      daily: `इस स्टोर के लिए दैनिक संदेश सीमा उसकी सदस्यता के अनुसार पहुंच गई है${timezone ? ` (~${getTimeUntilMidnight(timezone).totalHours} घंटों में रीसेट)` : ''}। कृपया कल फिर से कोशिश करें। 🕐`,
       monthly: `इस स्टोर के लिए मासिक संदेश सीमा उसकी सदस्यता के अनुसार पहुंच गई है। कृपया स्टोर प्रबंधन से संपर्क करें। 📞`
     },
     tr: {
-      daily: `Bu mağaza için günlük mesaj limiti aboneliğine göre ulaşıldı. Lütfen yarın tekrar deneyin. 🕐`,
+      daily: `Bu mağaza için günlük mesaj limiti aboneliğine göre ulaşıldı${timezone ? ` (~${getTimeUntilMidnight(timezone).totalHours} saat içinde sıfırlanır)` : ''}. Lütfen yarın tekrar deneyin. 🕐`,
       monthly: `Bu mağaza için aylık mesaj limiti aboneliğine göre ulaşıldı. Lütfen mağaza yönetimi ile iletişime geçin. 📞`
     },
     nl: {
-      daily: `Dagelijkse berichtenlimiet voor deze winkel volgens het abonnement bereikt. Probeer het morgen opnieuw. 🕐`,
+      daily: `Dagelijkse berichtenlimiet voor deze winkel volgens het abonnement bereikt${timezone ? ` (reset over ~${getTimeUntilMidnight(timezone).totalHours} uur)` : ''}. Probeer het morgen opnieuw. 🕐`,
       monthly: `Maandelijkse berichtenlimiet voor deze winkel volgens het abonnement bereikt. Neem contact op met winkelbeheer. 📞`
     },
     pl: {
-      daily: `Dzienny limit wiadomości dla tego sklepu zgodnie z subskrypcją został osiągnięty. Spróbuj ponownie jutro. 🕐`,
+      daily: `Dzienny limit wiadomości dla tego sklepu zgodnie z subskrypcją został osiągnięty${timezone ? ` (reset za ~${getTimeUntilMidnight(timezone).totalHours} godzin)` : ''}. Spróbuj ponownie jutro. 🕐`,
       monthly: `Miesięczny limit wiadomości dla tego sklepu zgodnie z subskrypcją został osiągnięty. Skontaktuj się z zarządzaniem sklepu. 📞`
     },
     zh: {
-      daily: `根据订阅计划，此商店的每日消息限制已达到。请明天再试。🕐`,
+      daily: `根据订阅计划，此商店的每日消息限制已达到${timezone ? `（约${getTimeUntilMidnight(timezone).totalHours}小时后重置）` : ''}。请明天再试。🕐`,
       monthly: `根据订阅计划，此商店的每月消息限制已达到。请联系商店管理人员。📞`
     },
     ja: {
-      daily: `サブスクリプションに従って、このストアの1日のメッセージ制限に達しました。明日再度お試しください。🕐`,
+      daily: `サブスクリプションに従って、このストアの1日のメッセージ制限に達しました${timezone ? `（約${getTimeUntilMidnight(timezone).totalHours}時間後にリセット）` : ''}。明日再度お試しください。🕐`,
       monthly: `サブスクリプションに従って、このストアの月間メッセージ制限に達しました。ストア管理者にお問い合わせください。📞`
     },
     id: {
-      daily: `Batas pesan harian untuk toko ini sesuai langganan telah tercapai. Silakan coba lagi besok. 🕐`,
+      daily: `Batas pesan harian untuk toko ini sesuai langganan telah tercapai${timezone ? ` (reset dalam ~${getTimeUntilMidnight(timezone).totalHours} jam)` : ''}. Silakan coba lagi besok. 🕐`,
       monthly: `Batas pesan bulanan untuk toko ini sesuai langganan telah tercapai. Silakan hubungi manajemen toko. 📞`
     }
   }
