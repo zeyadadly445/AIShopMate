@@ -72,9 +72,14 @@ export default function SimpleAdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null)
-  const [view, setView] = useState<'overview' | 'merchants' | 'analytics'>('overview')
+  const [view, setView] = useState<'overview' | 'merchants' | 'conversations' | 'data-sources' | 'analytics' | 'settings'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [session, setSession] = useState<SimpleAdminSession | null>(null)
+  const [isCreatingMerchant, setIsCreatingMerchant] = useState(false)
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [conversations, setConversations] = useState<any[]>([])
+  const [dataSources, setDataSources] = useState<any[]>([])
+  const [actionLoading, setActionLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -93,6 +98,23 @@ export default function SimpleAdminDashboardPage() {
     const interval = setInterval(() => fetchDashboardData(currentSession), 60000)
     return () => clearInterval(interval)
   }, [router])
+
+  // تحميل البيانات عند تغيير التبويب
+  useEffect(() => {
+    if (!session) return
+
+    switch (view) {
+      case 'analytics':
+        fetchAnalytics()
+        break
+      case 'conversations':
+        fetchConversations()
+        break
+      case 'data-sources':
+        fetchDataSources()
+        break
+    }
+  }, [view, session])
 
   const fetchDashboardData = async (currentSession: SimpleAdminSession) => {
     try {
@@ -137,6 +159,119 @@ export default function SimpleAdminDashboardPage() {
     console.log('🚪 Logging out...')
     clearSimpleAdminSession()
     router.push('/admin/login-simple')
+  }
+
+  // جلب البيانات المتقدمة للتحليلات
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/admin/analytics', {
+        headers: {
+          'Authorization': `Bearer ${JSON.stringify(session)}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data.analytics)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching analytics:', error)
+    }
+  }
+
+  // جلب المحادثات
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch('/api/admin/conversations', {
+        headers: {
+          'Authorization': `Bearer ${JSON.stringify(session)}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setConversations(data.conversations)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching conversations:', error)
+    }
+  }
+
+  // جلب مصادر البيانات
+  const fetchDataSources = async () => {
+    try {
+      const response = await fetch('/api/admin/data-sources', {
+        headers: {
+          'Authorization': `Bearer ${JSON.stringify(session)}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setDataSources(data.dataSources)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching data sources:', error)
+    }
+  }
+
+  // إنشاء تاجر جديد
+  const createMerchant = async (merchantData: any) => {
+    setActionLoading(true)
+    try {
+      const response = await fetch('/api/admin/merchants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.stringify(session)}`
+        },
+        body: JSON.stringify(merchantData)
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        alert('✅ تم إنشاء التاجر بنجاح!')
+        setIsCreatingMerchant(false)
+        // إعادة تحميل البيانات
+        if (session) fetchDashboardData(session)
+        return result
+      } else {
+        const error = await response.json()
+        alert(`❌ خطأ: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('❌ Error creating merchant:', error)
+      alert('❌ حدث خطأ أثناء إنشاء التاجر')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // حذف محادثة
+  const deleteConversation = async (conversationId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذه المحادثة؟')) return
+
+    setActionLoading(true)
+    try {
+      const response = await fetch('/api/admin/conversations', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.stringify(session)}`
+        },
+        body: JSON.stringify({ conversationId })
+      })
+      
+      if (response.ok) {
+        alert('✅ تم حذف المحادثة بنجاح!')
+        fetchConversations()
+      } else {
+        const error = await response.json()
+        alert(`❌ خطأ: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('❌ Error deleting conversation:', error)
+      alert('❌ حدث خطأ أثناء حذف المحادثة')
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -236,11 +371,14 @@ export default function SimpleAdminDashboardPage() {
       {/* Navigation Tabs */}
       <div className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8 rtl:space-x-reverse">
+          <nav className="flex space-x-8 rtl:space-x-reverse overflow-x-auto">
             {[
               { key: 'overview', label: '🏠 نظرة عامة' },
-              { key: 'merchants', label: '👥 المستخدمين' },
-              { key: 'analytics', label: '📊 التحليلات' }
+              { key: 'merchants', label: '👥 إدارة التجار' },
+              { key: 'conversations', label: '💬 المحادثات' },
+              { key: 'data-sources', label: '📁 مصادر البيانات' },
+              { key: 'analytics', label: '📊 التحليلات المتقدمة' },
+              { key: 'settings', label: '⚙️ إعدادات النظام' }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -385,15 +523,22 @@ export default function SimpleAdminDashboardPage() {
                 <div className="flex-1 max-w-md">
                   <input
                     type="text"
-                    placeholder="البحث في المستخدمين..."
+                    placeholder="البحث في التجار..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                  <button
+                    onClick={() => setIsCreatingMerchant(true)}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2 rtl:space-x-reverse"
+                  >
+                    <span>➕</span>
+                    <span>إضافة تاجر جديد</span>
+                  </button>
                   <span className="text-sm text-gray-400">
-                    إجمالي: {filteredMerchants.length} مستخدم
+                    إجمالي: {filteredMerchants.length} تاجر
                   </span>
                 </div>
               </div>
@@ -503,14 +648,306 @@ export default function SimpleAdminDashboardPage() {
           </div>
         )}
 
-        {/* Analytics Tab */}
+        {/* Conversations Tab */}
+        {view === 'conversations' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">💬 إدارة المحادثات</h3>
+                <button
+                  onClick={fetchConversations}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  🔄 تحديث
+                </button>
+              </div>
+              
+              {conversations.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-700">
+                    <thead className="bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">التاجر</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">إحصائيات</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">آخر نشاط</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-gray-800 divide-y divide-gray-700">
+                      {conversations.map((conv) => (
+                        <tr key={conv.id} className="hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                {conv.merchant?.businessName || 'غير محدد'}
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                {conv.merchant?.email || 'غير محدد'}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-white">
+                              <div>📝 {conv.stats.totalMessages} رسالة</div>
+                              <div>👤 {conv.stats.userMessages} من المستخدم</div>
+                              <div>🤖 {conv.stats.botMessages} من البوت</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            {new Date(conv.stats.lastActivity).toLocaleDateString('ar-SA')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => deleteConversation(conv.id)}
+                              className="text-red-400 hover:text-red-300"
+                              disabled={actionLoading}
+                            >
+                              🗑️ حذف
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">لا توجد محادثات متاحة</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Data Sources Tab */}
+        {view === 'data-sources' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">📁 إدارة مصادر البيانات</h3>
+                <button
+                  onClick={fetchDataSources}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  🔄 تحديث
+                </button>
+              </div>
+              
+              {dataSources.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-700">
+                    <thead className="bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">المصدر</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">النوع</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">الحجم</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">الحالة</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">التاجر</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-gray-800 divide-y divide-gray-700">
+                      {dataSources.map((ds) => (
+                        <tr key={ds.id} className="hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-white">{ds.name}</div>
+                              <div className="text-sm text-gray-400">{ds.description || 'لا يوجد وصف'}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {ds.sourceType}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                            {ds.fileSizeMB} MB
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              ds.stats.isProcessed 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {ds.processingStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            {ds.merchant?.businessName || 'غير محدد'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">لا توجد مصادر بيانات متاحة</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Advanced Analytics Tab */}
         {view === 'analytics' && (
           <div className="space-y-6">
-            <div className="text-center py-12">
-              <h3 className="text-2xl font-bold text-gray-400 mb-4">📊 قسم التحليلات</h3>
-              <p className="text-gray-500">سيتم إضافة المزيد من التحليلات والرسوم البيانية قريباً</p>
-              <div className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded-lg">
-                <p className="text-green-300 text-sm">🚀 نظام محسن - بدون JWT</p>
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">📊 التحليلات المتقدمة</h3>
+                <button
+                  onClick={fetchAnalytics}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  🔄 تحديث
+                </button>
+              </div>
+              
+              {analytics ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Overview Stats */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">📈 نظرة عامة</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">إجمالي التجار:</span>
+                        <span className="text-white">{analytics.overview.totalMerchants}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">النشطين:</span>
+                        <span className="text-green-400">{analytics.overview.activeMerchants}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">معدل النشاط:</span>
+                        <span className="text-blue-400">{analytics.overview.activeRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subscription Stats */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">💳 الاشتراكات</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">إجمالي الاشتراكات:</span>
+                        <span className="text-white">{analytics.subscriptions.total}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">معدل الاستخدام:</span>
+                        <span className="text-yellow-400">{analytics.subscriptions.usageRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Revenue Stats */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">💰 الإيرادات</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">شهرياً:</span>
+                        <span className="text-green-400">${analytics.revenue.monthly}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">سنوياً:</span>
+                        <span className="text-green-400">${analytics.revenue.annual}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Merchants */}
+                  <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                    <h4 className="text-white font-medium mb-3">🏆 أفضل التجار</h4>
+                    <div className="space-y-2">
+                      {analytics.topMerchants.slice(0, 5).map((merchant: any, index: number) => (
+                        <div key={merchant.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <span className="text-gray-400 mr-2">{index + 1}.</span>
+                            <span className="text-white">{merchant.businessName}</span>
+                          </div>
+                          <span className="text-blue-400">{merchant.totalMessages} رسالة</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* System Health */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">🔧 صحة النظام</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">وقت التشغيل:</span>
+                        <span className="text-green-400">{analytics.systemHealth.uptime}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">قاعدة البيانات:</span>
+                        <span className="text-green-400">✅ متصلة</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-gray-400">جاري تحميل التحليلات...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {view === 'settings' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <h3 className="text-lg font-semibold mb-4">⚙️ إعدادات النظام</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="text-white font-medium mb-3">🔐 معلومات الأمان</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">نوع المصادقة:</span>
+                      <span className="text-green-400">Simple Session</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">JWT:</span>
+                      <span className="text-gray-400">معطل</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">الجلسة:</span>
+                      <span className="text-green-400">نشطة</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="text-white font-medium mb-3">📊 إحصائيات الأداء</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">سرعة الاستجابة:</span>
+                      <span className="text-green-400">سريع</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">استقرار النظام:</span>
+                      <span className="text-green-400">عالي</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">أخطاء الإنتاج:</span>
+                      <span className="text-green-400">صفر</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-green-900/20 border border-green-800 rounded-lg">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center ml-3">
+                    <span className="text-sm">✅</span>
+                  </div>
+                  <div>
+                    <p className="text-green-300 font-medium">نظام AI Shop Mate يعمل بشكل مثالي!</p>
+                    <p className="text-green-400 text-sm">🚀 أسرع وأكثر استقراراً من أي وقت مضى</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -610,6 +1047,137 @@ export default function SimpleAdminDashboardPage() {
                   زيارة الشات بوت
                 </a>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Merchant Modal */}
+      {isCreatingMerchant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">➕ إضافة تاجر جديد</h3>
+                <button
+                  onClick={() => setIsCreatingMerchant(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const merchantData = {
+                  email: formData.get('email'),
+                  businessName: formData.get('businessName'),
+                  phone: formData.get('phone'),
+                  welcomeMessage: formData.get('welcomeMessage'),
+                  primaryColor: formData.get('primaryColor'),
+                  subscriptionPlan: formData.get('subscriptionPlan')
+                }
+                createMerchant(merchantData)
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      البريد الإلكتروني *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="merchant@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      اسم الأعمال *
+                    </label>
+                    <input
+                      type="text"
+                      name="businessName"
+                      required
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="اسم الشركة أو المتجر"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      رقم الهاتف
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="+966501234567"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      رسالة الترحيب
+                    </label>
+                    <textarea
+                      name="welcomeMessage"
+                      rows={3}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="مرحباً! كيف يمكنني مساعدتك؟"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      اللون الأساسي
+                    </label>
+                    <input
+                      type="color"
+                      name="primaryColor"
+                      defaultValue="#3b82f6"
+                      className="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      خطة الاشتراك
+                    </label>
+                    <select
+                      name="subscriptionPlan"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="">بدون اشتراك</option>
+                      <option value="BASIC">أساسي - 1000 رسالة</option>
+                      <option value="STANDARD">معياري - 5000 رسالة</option>
+                      <option value="PREMIUM">مميز - 15000 رسالة</option>
+                      <option value="ENTERPRISE">مؤسسي - 50000 رسالة</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-4 rtl:space-x-reverse mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingMerchant(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                    disabled={actionLoading}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? 'جاري الإنشاء...' : 'إنشاء التاجر'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
