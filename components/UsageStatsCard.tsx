@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
+import { formatGregorianDate, formatGregorianTime } from '@/lib/date-utils';
 
 interface UsageStats {
   merchant: {
@@ -169,10 +170,7 @@ export default function UsageStatsCard({ merchantId }: UsageStatsCardProps) {
           <div>
             <span className="text-gray-600">آخر تحديث:</span>
             <p className="font-semibold">
-              {new Date(stats.timestamp).toLocaleTimeString('ar-SA', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              {formatGregorianTime(stats.timestamp)}
             </p>
           </div>
         </div>
@@ -183,7 +181,7 @@ export default function UsageStatsCard({ merchantId }: UsageStatsCardProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">الاستخدام اليومي</h3>
           <span className="text-sm text-gray-600">
-            تاريخ اليوم: {new Date(stats.lastDailyReset).toLocaleDateString('ar-SA')}
+            تاريخ اليوم: {formatGregorianDate(stats.lastDailyReset)}
           </span>
         </div>
         
@@ -220,7 +218,7 @@ export default function UsageStatsCard({ merchantId }: UsageStatsCardProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">الاستخدام الشهري</h3>
           <span className="text-sm text-gray-600">
-            آخر إعادة تعيين: {new Date(stats.lastReset).toLocaleDateString('ar-SA')}
+            آخر إعادة تعيين: {formatGregorianDate(stats.lastReset)}
           </span>
         </div>
         

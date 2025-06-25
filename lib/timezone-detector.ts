@@ -3,6 +3,8 @@
  * يضمن تجديد الحد اليومي في منتصف الليل المحلي لكل تاجر
  */
 
+import { formatGregorianDateTimeShort } from '@/lib/date-utils'
+
 export interface TimezoneInfo {
   timezone: string;
   offset: number;
@@ -26,17 +28,8 @@ export function detectUserTimezone(): TimezoneInfo {
     const offsetMinutes = Math.abs(offset % 60);
     const offsetString = `GMT${offset >= 0 ? '+' : '-'}${Math.abs(offsetHours).toString().padStart(2, '0')}:${offsetMinutes.toString().padStart(2, '0')}`;
     
-    // تنسيق الوقت المحلي
-    const localTime = now.toLocaleString('ar-SA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
+    // تنسيق الوقت المحلي (ميلادي)
+    const localTime = formatGregorianDateTimeShort(now);
 
     return {
       timezone,
@@ -156,15 +149,7 @@ export function searchTimezones(query: string): typeof POPULAR_TIMEZONES {
 export function formatTimezoneInfo(timezone: string): string {
   try {
     const now = new Date();
-    const timeInZone = now.toLocaleString('ar-SA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
+    const timeInZone = formatGregorianDateTimeShort(now.toLocaleString('en-US', { timeZone: timezone }));
     
     const offset = getTimezoneOffset(timezone);
     const offsetString = formatOffset(offset);

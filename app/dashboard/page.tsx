@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { formatGregorianDate, formatGregorianTime, formatGregorianDateTime } from '@/lib/date-utils'
 
 interface SubscriptionData {
   id: string
@@ -388,7 +389,7 @@ export default function DashboardPage() {
             </h2>
             <div className="text-right">
               <div className="text-sm text-gray-600">آخر تحديث</div>
-              <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('ar-SA')}</div>
+              <div className="text-xs text-gray-500">{formatGregorianTime(new Date())}</div>
             </div>
           </div>
 
@@ -683,7 +684,7 @@ export default function DashboardPage() {
               </h2>
               <div className="text-right">
                 <div className="text-sm text-gray-600">آخر تحديث</div>
-                <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('ar-SA')}</div>
+                <div className="text-xs text-gray-500">{formatGregorianTime(new Date())}</div>
               </div>
             </div>
 
@@ -807,7 +808,7 @@ export default function DashboardPage() {
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-700">التاريخ:</span>
                       <span className="text-sm font-bold text-gray-900">
-                        {new Date(dailyStats.thisMonth.peakDay.date).toLocaleDateString('ar-SA')}
+                        {formatGregorianDate(dailyStats.thisMonth.peakDay.date)}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1010,7 +1011,7 @@ export default function DashboardPage() {
                 <div>
                   <dt className="text-sm text-gray-900">آخر تحديث:</dt>
                   <dd className="text-sm font-medium text-gray-900">
-                    {new Date(stats.subscription.updatedAt).toLocaleDateString('ar-SA')}
+                    {formatGregorianDate(stats.subscription.updatedAt)}
                   </dd>
                 </div>
               </dl>

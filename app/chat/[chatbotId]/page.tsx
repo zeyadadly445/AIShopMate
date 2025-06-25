@@ -8,6 +8,7 @@ import rehypeHighlight from 'rehype-highlight'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
+import { formatGregorianTime } from '@/lib/date-utils'
 
 interface Merchant {
   id: string
@@ -531,11 +532,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 <p className={`text-xs mt-2 ${
                   message.role === 'user' ? 'text-white/80' : 'text-gray-900'
                 }`}>
-                  {message.timestamp.toLocaleTimeString('ar-SA', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true
-                  })}
+                  {formatGregorianTime(message.timestamp)}
                 </p>
               </div>
             </div>
