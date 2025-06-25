@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAdminSession, clearAdminSession } from '@/lib/admin-auth'
+import { getAdminSession, clearAdminSession } from '@/lib/admin-auth-db'
 
 interface Stats {
   totalMerchants: number
@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
         return
       }
 
-      const response = await fetch('/api/admin/dashboard', {
+      const response = await fetch('/api/admin/dashboard-db', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
