@@ -35,15 +35,15 @@ export async function GET(request: NextRequest) {
       .select('id, created_at, is_active')
 
     const totalMerchants = merchants?.length || 0
-    const activeMerchants = merchants?.filter(m => m.is_active).length || 0
-    const newMerchants = merchants?.filter(m => m.created_at >= startDate).length || 0
+    const activeMerchants = merchants?.filter((m: any) => m.is_active).length || 0
+    const newMerchants = merchants?.filter((m: any) => m.created_at >= startDate).length || 0
 
     // إحصائيات الاشتراكات
     const { data: subscriptions } = await supabaseAdmin
       .from('Subscription')
       .select('plan, status, messages_used, messages_limit, created_at')
 
-    const subscriptionStats = subscriptions?.reduce((acc, sub) => {
+    const subscriptionStats = subscriptions?.reduce((acc: any, sub: any) => {
       acc.total++
       acc.byPlan[sub.plan] = (acc.byPlan[sub.plan] || 0) + 1
       acc.byStatus[sub.status] = (acc.byStatus[sub.status] || 0) + 1
@@ -63,14 +63,14 @@ export async function GET(request: NextRequest) {
       .from('Conversation')
       .select('id, created_at, updated_at, is_active, Message(id, tokens_used, created_at)')
 
-    const conversationStats = conversations?.reduce((acc, conv) => {
+    const conversationStats = conversations?.reduce((acc: any, conv: any) => {
       acc.total++
       if (conv.is_active) acc.active++
       if (conv.created_at >= startDate) acc.recent++
       
       const messages = conv.Message || []
       acc.totalMessages += messages.length
-      acc.totalTokens += messages.reduce((sum, m) => sum + (m.tokens_used || 0), 0)
+      acc.totalTokens += messages.reduce((sum: number, m: any) => sum + (m.tokens_used || 0), 0)
       
       return acc
     }, {
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       .from('DataSource')
       .select('source_type, file_size, created_at, processed_at')
 
-    const dataSourceStats = dataSources?.reduce((acc, ds) => {
+    const dataSourceStats = dataSources?.reduce((acc: any, ds: any) => {
       acc.total++
       acc.byType[ds.source_type] = (acc.byType[ds.source_type] || 0) + 1
       acc.totalSize += ds.file_size || 0
@@ -111,16 +111,16 @@ export async function GET(request: NextRequest) {
       const dayStart = `${date}T00:00:00.000Z`
       const dayEnd = `${date}T23:59:59.999Z`
 
-      const dayMerchants = merchants?.filter(m => 
+      const dayMerchants = merchants?.filter((m: any) => 
         m.created_at >= dayStart && m.created_at <= dayEnd
       ).length || 0
 
-      const dayConversations = conversations?.filter(c => 
+      const dayConversations = conversations?.filter((c: any) => 
         c.created_at >= dayStart && c.created_at <= dayEnd
       ).length || 0
 
-      const dayMessages = conversations?.reduce((sum, c) => {
-        const dayMessages = c.Message?.filter(m => 
+      const dayMessages = conversations?.reduce((sum: number, c: any) => {
+        const dayMessages = c.Message?.filter((m: any) => 
           m.created_at >= dayStart && m.created_at <= dayEnd
         ).length || 0
         return sum + dayMessages
@@ -149,10 +149,10 @@ export async function GET(request: NextRequest) {
       `)
       .limit(10)
 
-    const topMerchantsFormatted = topMerchants.data?.map(merchant => {
+    const topMerchantsFormatted = topMerchants.data?.map((merchant: any) => {
       const subscription = merchant.Subscription?.[0]
       const totalMessages = merchant.Message?.length || 0
-      const totalTokens = merchant.Message?.reduce((sum, m) => sum + (m.tokens_used || 0), 0) || 0
+      const totalTokens = merchant.Message?.reduce((sum: number, m: any) => sum + (m.tokens_used || 0), 0) || 0
       
       return {
         id: merchant.id,
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
     }).sort((a, b) => b.totalMessages - a.totalMessages) || []
 
     // حساب الإيرادات المتوقعة
-    const revenueStats = subscriptions?.reduce((acc, sub) => {
+    const revenueStats = subscriptions?.reduce((acc: any, sub: any) => {
       const planPrices = {
         BASIC: 49,
         STANDARD: 99,

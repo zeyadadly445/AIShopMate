@@ -74,11 +74,11 @@ export async function GET(request: NextRequest) {
     // تنسيق البيانات
     const formattedConversations = conversations?.map(conv => {
       const messages = conv.Message || []
-      const userMessages = messages.filter(m => m.is_from_user)
-      const botMessages = messages.filter(m => !m.is_from_user)
-      const totalTokens = messages.reduce((sum, m) => sum + (m.tokens_used || 0), 0)
+      const userMessages = messages.filter((m: any) => m.is_from_user)
+      const botMessages = messages.filter((m: any) => !m.is_from_user)
+      const totalTokens = messages.reduce((sum: number, m: any) => sum + (m.tokens_used || 0), 0)
       
-      const lastUserMessage = userMessages.sort((a, b) => 
+      const lastUserMessage = userMessages.sort((a: any, b: any) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )[0]
 
