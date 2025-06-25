@@ -5,9 +5,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET - جلب تفاصيل تاجر واحد
 export async function GET(
   request: NextRequest,
-  context: { params: { merchantId: string } }
+  context: { params: Promise<{ merchantId: string }> }
 ) {
-  const { params } = context
+  const params = await context.params
   try {
     console.log(`👤 Admin Merchant API - GET merchant ${params.merchantId}`)
     
@@ -146,9 +146,9 @@ export async function GET(
 // PUT - تحديث بيانات التاجر
 export async function PUT(
   request: NextRequest,
-  context: { params: { merchantId: string } }
+  context: { params: Promise<{ merchantId: string }> }
 ) {
-  const { params } = context
+  const params = await context.params
   try {
     console.log(`👤 Admin Merchant API - UPDATE merchant ${params.merchantId}`)
     
@@ -231,9 +231,9 @@ export async function PUT(
 // DELETE - حذف التاجر وجميع البيانات المرتبطة
 export async function DELETE(
   request: NextRequest,
-  context: { params: { merchantId: string } }
+  context: { params: Promise<{ merchantId: string }> }
 ) {
-  const { params } = context
+  const params = await context.params
   try {
     console.log(`👤 Admin Merchant API - DELETE merchant ${params.merchantId}`)
     
