@@ -83,7 +83,7 @@ export async function performMonthlyReset(
       }
     }
 
-    const merchant = data.Merchant
+    const merchant = Array.isArray(data.Merchant) ? data.Merchant[0] : data.Merchant
     const resetCount = getMessageLimitByPlan(data.plan)
 
     console.log(`🔄 تم التجديد الشهري للتاجر: ${merchant?.businessName} (${merchant?.email}) - ${resetCount} رسالة`)

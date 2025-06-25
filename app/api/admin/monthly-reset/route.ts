@@ -65,10 +65,11 @@ export async function GET(request: NextRequest) {
       const needsReset = needsMonthlyReset(subscriptionData)
       const eligible = isEligibleForReset(subscriptionData)
       
+      const merchant = Array.isArray(sub.Merchant) ? sub.Merchant[0] : sub.Merchant
       const merchantInfo = {
         ...subscriptionData,
-        businessName: sub.Merchant?.businessName,
-        email: sub.Merchant?.email,
+        businessName: merchant?.businessName,
+        email: merchant?.email,
         daysSinceReset: Math.floor((Date.now() - new Date(sub.lastReset).getTime()) / (1000 * 60 * 60 * 24))
       }
 
@@ -201,19 +202,20 @@ export async function POST(request: NextRequest) {
        }
 
        // التحقق من الأهلية مرة أخرى
+       const merchant = Array.isArray(sub.Merchant) ? sub.Merchant[0] : sub.Merchant
        if (isEligibleForReset(subscriptionData)) {
          const resetResult = await performMonthlyReset(supabaseAdmin, sub.id)
          resetResults.push({
            subscriptionId: sub.id,
-           businessName: sub.Merchant?.businessName,
-           email: sub.Merchant?.email,
+           businessName: merchant?.businessName,
+           email: merchant?.email,
            ...resetResult
          })
        } else {
          resetResults.push({
            subscriptionId: sub.id,
-           businessName: sub.Merchant?.businessName,
-           email: sub.Merchant?.email,
+           businessName: merchant?.businessName,
+           email: merchant?.email,
            success: false,
            message: 'غير مؤهل للتجديد'
          })
