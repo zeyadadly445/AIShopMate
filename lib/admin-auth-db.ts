@@ -100,10 +100,10 @@ export class AdminAuthService {
       dbId: admin.id
     }
 
+    console.log('🎫 Generating JWT token for admin:', admin.username)
+
     return jwt.sign(payload, ADMIN_JWT_SECRET, { 
-      expiresIn: '24h',
-      issuer: 'ai-shop-mate-admin',
-      audience: 'admin-panel'
+      expiresIn: '24h'
     })
   }
 
@@ -113,30 +113,63 @@ export class AdminAuthService {
   static verifyAdminToken(token: string): AdminSession | null {
     try {
       if (!token) {
+        console.log('🚫 No token provided')
         return null
       }
 
-      const decoded = jwt.verify(token, ADMIN_JWT_SECRET, {
-        issuer: 'ai-shop-mate-admin',
-        audience: 'admin-panel'
-      }) as AdminSession
+      console.log('🔍 Verifying JWT token...')
 
-      if (!decoded || 
-          typeof decoded !== 'object' || 
-          !decoded.adminId || 
-          !decoded.isAdmin) {
+      // Try basic JWT verification first
+      let decoded: any
+      try {
+        decoded = jwt.verify(token, ADMIN_JWT_SECRET)
+        console.log('✅ JWT verification successful')
+      } catch (jwtError: any) {
+        console.error('❌ JWT verification failed:', jwtError.message)
+        
+        // Try without issuer/audience validation
+        try {
+          decoded = jwt.verify(token, ADMIN_JWT_SECRET, { ignoreExpiration: false })
+          console.log('✅ JWT verification successful (fallback)')
+        } catch (fallbackError: any) {
+          console.error('❌ JWT fallback verification failed:', fallbackError.message)
+          return null
+        }
+      }
+
+      if (!decoded || typeof decoded !== 'object') {
+        console.log('❌ Invalid decoded token structure')
+        return null
+      }
+
+      // التحقق من وجود البيانات المطلوبة
+      if (!decoded.adminId || !decoded.username || decoded.isAdmin !== true) {
+        console.log('❌ Missing required admin token fields')
         return null
       }
 
       // التحقق من انتهاء الجلسة (24 ساعة)
-      const sessionAge = Date.now() - decoded.loginTime
-      if (sessionAge > 24 * 60 * 60 * 1000) {
-        return null
+      if (decoded.loginTime) {
+        const sessionAge = Date.now() - decoded.loginTime
+        if (sessionAge > 24 * 60 * 60 * 1000) {
+          console.log('❌ Session expired')
+          return null
+        }
       }
 
-      return decoded
-    } catch (error) {
-      console.error('Invalid admin token:', error)
+      const adminSession: AdminSession = {
+        adminId: decoded.adminId,
+        username: decoded.username,
+        loginTime: decoded.loginTime || Date.now(),
+        isAdmin: true,
+        dbId: decoded.dbId || 0
+      }
+
+      console.log('✅ Admin session validated:', adminSession.username)
+      return adminSession
+
+    } catch (error: any) {
+      console.error('❌ Token verification error:', error.message)
       return null
     }
   }
@@ -194,16 +227,26 @@ export function requireAdminAuth(req: Request): AdminSession | null {
   console.log('🔍 Database-based Admin Auth Check')
   
   const authHeader = req.headers.get('authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    console.log('❌ No valid authorization header')
+  if (!authHeader) {
+    console.log('❌ No authorization header')
+    return null
+  }
+  
+  if (!authHeader.startsWith('Bearer ')) {
+    console.log('❌ Invalid authorization header format')
     return null
   }
 
   const token = authHeader.substring(7)
   console.log('🎫 Token received, length:', token.length)
   
+  if (!token || token.length < 10) {
+    console.log('❌ Token too short or empty')
+    return null
+  }
+  
   const result = AdminAuthService.verifyAdminToken(token)
-  console.log('🔐 Token verification result:', result ? 'SUCCESS' : 'FAILED')
+  console.log('🔐 Token verification result:', result ? `SUCCESS (${result.username})` : 'FAILED')
   
   return result
 }
@@ -212,14 +255,31 @@ export function requireAdminAuth(req: Request): AdminSession | null {
  * دالة للحماية من جانب العميل
  */
 export function getAdminSession(): AdminSession | null {
-  if (typeof window === 'undefined') return null
+  if (typeof window === 'undefined') {
+    console.log('🚫 Window undefined (server side)')
+    return null
+  }
   
   const token = localStorage.getItem('admin_token')
-  if (!token) return null
+  if (!token) {
+    console.log('🚫 No admin token in localStorage')
+    return null
+  }
 
   try {
-    return AdminAuthService.verifyAdminToken(token)
-  } catch (error) {
+    console.log('🔍 Checking admin session from localStorage')
+    const session = AdminAuthService.verifyAdminToken(token)
+    
+    if (!session) {
+      console.log('🚫 Invalid session, clearing localStorage')
+      clearAdminSession()
+      return null
+    }
+    
+    console.log('✅ Valid admin session found')
+    return session
+  } catch (error: any) {
+    console.error('❌ Error checking admin session:', error.message)
     clearAdminSession()
     return null
   }
