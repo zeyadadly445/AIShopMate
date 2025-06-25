@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+interface DailyStatsRow {
+  date: string
+  messages_count: number
+  unique_sessions_count: number
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ merchantId: string }> }
@@ -12,77 +18,56 @@ export async function GET(
       return NextResponse.json({ error: 'merchantId is required' }, { status: 400 })
     }
 
-    // Get today's stats
-    const { data: todayStats, error: todayError } = await supabaseAdmin
-      .from('DailyUsageStats')
-      .select('*')
-      .eq('merchantId', merchantId)
-      .eq('date', new Date().toISOString().split('T')[0])
-      .single()
-
-    // Get last 30 days stats
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
+    // Get last 30 days stats using secure function
     const { data: last30Days, error: monthlyError } = await supabaseAdmin
-      .from('DailyUsageStats')
-      .select('*')
-      .eq('merchantId', merchantId)
-      .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
-      .order('date', { ascending: false })
+      .rpc('get_merchant_daily_stats', {
+        target_merchant_id: merchantId,
+        days_back: 30
+      })
 
-    // Get current month stats from view
-    const currentMonth = new Date().toISOString().slice(0, 7) + '-01'
+    // Find today's stats from the data
+    const todayDate = new Date().toISOString().split('T')[0]
+    const todayStats = last30Days?.find((day: DailyStatsRow) => day.date === todayDate) || null
+
+    // Get current month stats using secure function
     const { data: monthlyStats, error: monthlyViewError } = await supabaseAdmin
-      .from('MonthlyUsageStats')
-      .select('*')
-      .eq('merchantId', merchantId)
-      .eq('month', currentMonth)
-      .single()
-
-    // Get last 7 days for weekly trend
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const { data: last7Days, error: weeklyError } = await supabaseAdmin
-      .from('DailyUsageStats')
-      .select('*')
-      .eq('merchantId', merchantId)
-      .gte('date', sevenDaysAgo.toISOString().split('T')[0])
-      .order('date', { ascending: true })
+      .rpc('get_merchant_monthly_stats', {
+        target_merchant_id: merchantId
+      })
 
     // Calculate trends and analytics
-    const totalMessagesToday = todayStats?.messagesCount || 0
-    const totalSessionsToday = todayStats?.uniqueSessionsCount || 0
+    const totalMessagesToday = todayStats?.messages_count || 0
+    const totalSessionsToday = todayStats?.unique_sessions_count || 0
 
     // Calculate monthly totals
-    const monthlyTotalMessages = last30Days?.reduce((sum, day) => sum + day.messagesCount, 0) || 0
-    const monthlyTotalSessions = last30Days?.reduce((sum, day) => sum + day.uniqueSessionsCount, 0) || 0
+    const monthlyTotalMessages = last30Days?.reduce((sum: number, day: DailyStatsRow) => sum + day.messages_count, 0) || 0
+    const monthlyTotalSessions = last30Days?.reduce((sum: number, day: DailyStatsRow) => sum + day.unique_sessions_count, 0) || 0
     const activeDaysThisMonth = last30Days?.length || 0
 
-    // Calculate weekly trend
-    const weeklyTotalMessages = last7Days?.reduce((sum, day) => sum + day.messagesCount, 0) || 0
-    const weeklyAvgMessages = weeklyTotalMessages / Math.max(last7Days?.length || 1, 1)
+    // Get last 7 days for weekly trend
+    const last7Days = last30Days?.slice(0, 7) || []
+    const weeklyTotalMessages = last7Days.reduce((sum: number, day: DailyStatsRow) => sum + day.messages_count, 0)
+    const weeklyAvgMessages = weeklyTotalMessages / Math.max(last7Days.length, 1)
 
     // Calculate daily average for this month
     const dailyAvgMessages = monthlyTotalMessages / Math.max(activeDaysThisMonth, 1)
 
     // Find peak day
-    const peakDay = last30Days?.reduce((max, day) => 
-      day.messagesCount > (max?.messagesCount || 0) ? day : max, 
+    const peakDay = last30Days?.reduce((max: DailyStatsRow | null, day: DailyStatsRow) => 
+      day.messages_count > (max?.messages_count || 0) ? day : max, 
       null
-    )
+    ) || null
 
     // Calculate growth trends
-    const last7DaysMessages = last7Days?.reduce((sum, day) => sum + day.messagesCount, 0) || 0
-    const previous7Days = last30Days?.slice(7, 14)?.reduce((sum, day) => sum + day.messagesCount, 0) || 0
-    const weeklyGrowth = previous7Days > 0 ? ((last7DaysMessages - previous7Days) / previous7Days) * 100 : 0
+    const previous7Days = last30Days?.slice(7, 14) || []
+    const previous7DaysMessages = previous7Days.reduce((sum: number, day: DailyStatsRow) => sum + day.messages_count, 0)
+    const weeklyGrowth = previous7DaysMessages > 0 ? ((weeklyTotalMessages - previous7DaysMessages) / previous7DaysMessages) * 100 : 0
 
     // Create daily chart data for last 30 days
-    const chartData = last30Days?.map(day => ({
+    const chartData = last30Days?.map((day: DailyStatsRow) => ({
       date: day.date,
-      messages: day.messagesCount,
-      sessions: day.uniqueSessionsCount
+      messages: day.messages_count,
+      sessions: day.unique_sessions_count
     })) || []
 
     // Get subscription info for context
@@ -105,7 +90,7 @@ export async function GET(
         dailyAverage: Math.round(dailyAvgMessages * 100) / 100,
         peakDay: peakDay ? {
           date: peakDay.date,
-          messages: peakDay.messagesCount
+          messages: peakDay.messages_count
         } : null
       },
       thisWeek: {
@@ -126,7 +111,7 @@ export async function GET(
       trends: {
         weeklyGrowth: Math.round(weeklyGrowth * 100) / 100,
         monthlyAverage: Math.round(dailyAvgMessages * 100) / 100,
-        peakDayMessages: peakDay?.messagesCount || 0
+        peakDayMessages: peakDay?.messages_count || 0
       },
       chartData: chartData,
       analytics: {
