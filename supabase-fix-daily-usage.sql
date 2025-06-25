@@ -1,5 +1,13 @@
--- إنشاء جدول تتبع الاستهلاك اليومي
-CREATE TABLE IF NOT EXISTS "DailyUsageStats" (
+-- حذف الجدول القديم والدوال إذا كانت موجودة
+DROP TABLE IF EXISTS "DailyUsageStats" CASCADE;
+DROP VIEW IF EXISTS "MonthlyUsageStats" CASCADE;
+DROP VIEW IF EXISTS "WeeklyUsageStats" CASCADE;
+DROP FUNCTION IF EXISTS increment_daily_usage(UUID, TEXT);
+DROP FUNCTION IF EXISTS increment_daily_usage(TEXT, TEXT);
+DROP FUNCTION IF EXISTS update_daily_usage_updated_at();
+
+-- إنشاء جدول تتبع الاستهلاك اليومي بنوع البيانات الصحيح
+CREATE TABLE "DailyUsageStats" (
   "id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   "merchantId" TEXT NOT NULL REFERENCES "Merchant"("id") ON DELETE CASCADE,
   "date" DATE NOT NULL,
@@ -13,10 +21,10 @@ CREATE TABLE IF NOT EXISTS "DailyUsageStats" (
 );
 
 -- إنشاء فهارس للأداء
-CREATE INDEX IF NOT EXISTS idx_daily_usage_merchant_date 
+CREATE INDEX idx_daily_usage_merchant_date 
 ON "DailyUsageStats"("merchantId", "date" DESC);
 
-CREATE INDEX IF NOT EXISTS idx_daily_usage_date 
+CREATE INDEX idx_daily_usage_date 
 ON "DailyUsageStats"("date" DESC);
 
 -- دالة لتحديث الـ updatedAt تلقائياً
@@ -29,13 +37,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- إنشاء trigger للتحديث التلقائي
-DROP TRIGGER IF EXISTS trigger_daily_usage_updated_at ON "DailyUsageStats";
 CREATE TRIGGER trigger_daily_usage_updated_at
   BEFORE UPDATE ON "DailyUsageStats"
   FOR EACH ROW
   EXECUTE FUNCTION update_daily_usage_updated_at();
 
--- دالة لإدراج أو تحديث الإحصائيات اليومية
+-- دالة لإدراج أو تحديث الإحصائيات اليومية مع نوع البيانات الصحيح
 CREATE OR REPLACE FUNCTION increment_daily_usage(
   merchant_id TEXT,
   session_id TEXT DEFAULT NULL
@@ -78,7 +85,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- إنشاء view للإحصائيات الشهرية
-CREATE OR REPLACE VIEW "MonthlyUsageStats" AS
+CREATE VIEW "MonthlyUsageStats" AS
 SELECT 
   "merchantId",
   DATE_TRUNC('month', "date") as "month",
@@ -92,7 +99,7 @@ FROM "DailyUsageStats"
 GROUP BY "merchantId", DATE_TRUNC('month', "date");
 
 -- إنشاء view للإحصائيات الأسبوعية
-CREATE OR REPLACE VIEW "WeeklyUsageStats" AS
+CREATE VIEW "WeeklyUsageStats" AS
 SELECT 
   "merchantId",
   DATE_TRUNC('week', "date") as "week",
@@ -102,44 +109,6 @@ SELECT
   AVG("messagesCount") as "avgDailyMessages"
 FROM "DailyUsageStats"
 GROUP BY "merchantId", DATE_TRUNC('week', "date");
-
--- إضافة بيانات تجريبية للأيام الماضية (اختياري)
--- يمكن حذف هذا الجزء إذا لم تريد بيانات تجريبية
-
--- تعليق: لإضافة بيانات تجريبية، قم بتشغيل هذا مع merchant IDs حقيقية
-/*
-DO $$
-DECLARE
-  sample_merchant_id TEXT;
-  i INTEGER;
-  random_count INTEGER;
-BEGIN
-  -- احصل على أول merchant ID (غير هذا للـ ID الحقيقي)
-  SELECT "id" INTO sample_merchant_id FROM "Merchant" LIMIT 1;
-  
-  IF sample_merchant_id IS NOT NULL THEN
-    -- إضافة بيانات للأيام الـ 30 الماضية
-    FOR i IN 0..29 LOOP
-      random_count := floor(random() * 50) + 1; -- بين 1 و 50 رسالة يومياً
-      
-      INSERT INTO "DailyUsageStats" (
-        "merchantId", 
-        "date", 
-        "messagesCount",
-        "uniqueSessionsCount",
-        "createdAt"
-      ) VALUES (
-        sample_merchant_id, 
-        CURRENT_DATE - i, 
-        random_count,
-        floor(random() * 10) + 1, -- بين 1 و 10 جلسات يومياً
-        NOW() - (i || ' days')::INTERVAL
-      )
-      ON CONFLICT ("merchantId", "date") DO NOTHING;
-    END LOOP;
-  END IF;
-END $$;
-*/
 
 -- منح الصلاحيات
 GRANT ALL ON "DailyUsageStats" TO anon, authenticated;
