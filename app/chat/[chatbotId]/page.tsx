@@ -732,23 +732,54 @@ export default function ChatPage({ params }: ChatPageProps) {
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
                           <div className="text-sm sm:text-base leading-relaxed w-full">
-                            {/* Simple and effective content rendering */}
+                            {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
                             {(() => {
                               const content = message.content.trim()
                               
-                              // Simple check: if content contains HTML tags, use dangerouslySetInnerHTML
+                              // Smart check: if content contains HTML tags, use dangerouslySetInnerHTML with enhanced markdown
                               const hasHTMLTags = content.includes('<') && content.includes('>')
                               
                               if (hasHTMLTags) {
-                                // Convert basic markdown to HTML first
+                                // Enhanced markdown to HTML conversion with full support
                                 let processedContent = content
+                                  // Text formatting
                                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
-                                  .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 4px 0; color: #333;">$1</h3>$2') // ### header
-                                  .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 5px 0; color: #333;">$1</h2>$2') // ## header
-                                  .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 6px 0; color: #333;">$1</h1>$2') // # header
-                                  .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333;">$1</li>') // - list items
-                                  .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
-                                  .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks - smaller spacing
+                                  .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>') // *italic* (not part of **)
+                                  .replace(/~~(.*?)~~/g, '<del style="text-decoration: line-through;">$1</del>') // ~~strikethrough~~
+                                  .replace(/`([^`]+?)`/g, '<code style="background: #f1f1f1; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 0.9em;">$1</code>') // `inline code`
+                                  
+                                  // Headers
+                                  .replace(/^### (.*?)$/gm, '<h3 style="font-weight: bold; margin: 4px 0; color: #333; font-size: 1.1em;">$1</h3>') // ### header
+                                  .replace(/^## (.*?)$/gm, '<h2 style="font-weight: bold; margin: 5px 0; color: #333; font-size: 1.2em;">$1</h2>') // ## header
+                                  .replace(/^# (.*?)$/gm, '<h1 style="font-weight: bold; margin: 6px 0; color: #333; font-size: 1.3em;">$1</h1>') // # header
+                                  
+                                  // Links
+                                  .replace(/\[([^\]]+?)\]\(([^)]+?)\)/g, '<a href="$2" style="color: #2563eb; text-decoration: underline;" target="_blank" rel="noopener noreferrer">$1</a>') // [text](url)
+                                  
+                                  // Code blocks
+                                  .replace(/```(\w+)?\n?([\s\S]*?)```/g, '<div style="background: #1a1a1a; color: #00ff00; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-family: monospace; font-size: 0.9em; overflow-x: auto; white-space: pre-wrap;">$2</div>')
+                                  
+                                  // Blockquotes
+                                  .replace(/^> (.*?)$/gm, '<blockquote style="border-right: 4px solid #3b82f6; padding-right: 12px; margin: 5px 0; font-style: italic; background: #f8fafc; padding: 8px 12px; border-radius: 0 6px 6px 0;">$1</blockquote>')
+                                  
+                                  // Horizontal rules
+                                  .replace(/^---+$/gm, '<hr style="border: none; border-top: 2px solid #e5e7eb; margin: 10px 0;">')
+                                  .replace(/^\*\*\*+$/gm, '<hr style="border: none; border-top: 2px solid #e5e7eb; margin: 10px 0;">')
+                                  
+                                  // Lists - different bullet types
+                                  .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: disc;">$1</li>') // - list
+                                  .replace(/^\* (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: circle;">$1</li>') // * list
+                                  .replace(/^\+ (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: square;">$1</li>') // + list
+                                  .replace(/^(\d+)\. (.*?)$/gm, '<li style="margin: 1px 0; color: #333;" value="$1">$2</li>') // 1. numbered list
+                                  
+                                  // Wrap consecutive list items in appropriate lists
+                                  .replace(/((?:<li.*list-style-type: disc.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>')
+                                  .replace(/((?:<li.*list-style-type: circle.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: circle;">$1</ul>')
+                                  .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
+                                  .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
+                                  
+                                  // Paragraph breaks and line breaks
+                                  .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks
                                   .replace(/\n/g, '<br>') // line breaks
                                 
                                 return (
@@ -884,19 +915,50 @@ export default function ChatPage({ params }: ChatPageProps) {
                           {(() => {
                             const content = streamingMessage.trim()
                             
-                            // Simple check: if content contains HTML tags, use dangerouslySetInnerHTML
+                            // Smart check: if content contains HTML tags, use dangerouslySetInnerHTML with enhanced markdown
                             const hasHTMLTags = content.includes('<') && content.includes('>')
                             
                             if (hasHTMLTags) {
-                              // Convert basic markdown to HTML first
+                              // Enhanced markdown to HTML conversion with full support
                               let processedContent = content
+                                // Text formatting
                                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
-                                .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 4px 0; color: #333;">$1</h3>$2') // ### header
-                                .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 5px 0; color: #333;">$1</h2>$2') // ## header
-                                .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 6px 0; color: #333;">$1</h1>$2') // # header
-                                .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333;">$1</li>') // - list items
-                                .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
-                                .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks - smaller spacing
+                                .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>') // *italic* (not part of **)
+                                .replace(/~~(.*?)~~/g, '<del style="text-decoration: line-through;">$1</del>') // ~~strikethrough~~
+                                .replace(/`([^`]+?)`/g, '<code style="background: #f1f1f1; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 0.9em;">$1</code>') // `inline code`
+                                
+                                // Headers
+                                .replace(/^### (.*?)$/gm, '<h3 style="font-weight: bold; margin: 4px 0; color: #333; font-size: 1.1em;">$1</h3>') // ### header
+                                .replace(/^## (.*?)$/gm, '<h2 style="font-weight: bold; margin: 5px 0; color: #333; font-size: 1.2em;">$1</h2>') // ## header
+                                .replace(/^# (.*?)$/gm, '<h1 style="font-weight: bold; margin: 6px 0; color: #333; font-size: 1.3em;">$1</h1>') // # header
+                                
+                                // Links
+                                .replace(/\[([^\]]+?)\]\(([^)]+?)\)/g, '<a href="$2" style="color: #2563eb; text-decoration: underline;" target="_blank" rel="noopener noreferrer">$1</a>') // [text](url)
+                                
+                                // Code blocks
+                                .replace(/```(\w+)?\n?([\s\S]*?)```/g, '<div style="background: #1a1a1a; color: #00ff00; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-family: monospace; font-size: 0.9em; overflow-x: auto; white-space: pre-wrap;">$2</div>')
+                                
+                                // Blockquotes
+                                .replace(/^> (.*?)$/gm, '<blockquote style="border-right: 4px solid #3b82f6; padding-right: 12px; margin: 5px 0; font-style: italic; background: #f8fafc; padding: 8px 12px; border-radius: 0 6px 6px 0;">$1</blockquote>')
+                                
+                                // Horizontal rules
+                                .replace(/^---+$/gm, '<hr style="border: none; border-top: 2px solid #e5e7eb; margin: 10px 0;">')
+                                .replace(/^\*\*\*+$/gm, '<hr style="border: none; border-top: 2px solid #e5e7eb; margin: 10px 0;">')
+                                
+                                // Lists - different bullet types
+                                .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: disc;">$1</li>') // - list
+                                .replace(/^\* (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: circle;">$1</li>') // * list
+                                .replace(/^\+ (.*?)$/gm, '<li style="margin: 1px 0; color: #333; list-style-type: square;">$1</li>') // + list
+                                .replace(/^(\d+)\. (.*?)$/gm, '<li style="margin: 1px 0; color: #333;" value="$1">$2</li>') // 1. numbered list
+                                
+                                // Wrap consecutive list items in appropriate lists
+                                .replace(/((?:<li.*list-style-type: disc.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>')
+                                .replace(/((?:<li.*list-style-type: circle.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: circle;">$1</ul>')
+                                .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
+                                .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
+                                
+                                // Paragraph breaks and line breaks
+                                .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks
                                 .replace(/\n/g, '<br>') // line breaks
                               
                               return (
