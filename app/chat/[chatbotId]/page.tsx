@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
@@ -733,33 +734,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                           <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight]}
+                              rehypePlugins={[rehypeHighlight, rehypeRaw]}
                               components={{
                                 h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
                                 h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
                                 h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
                                 p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                 br: ({node, ...props}) => <br {...props} />,
-                                span: ({node, style, children, ...props}) => {
-                                  // Handle inline styles for colors and backgrounds
-                                  const inlineStyle: React.CSSProperties = {}
-                                  if (style) {
-                                    const styleStr = style.toString()
-                                    if (styleStr.includes('color:')) {
-                                      const colorMatch = styleStr.match(/color:\s*([^;]+)/)
-                                      if (colorMatch) {
-                                        inlineStyle.color = colorMatch[1].trim()
-                                      }
-                                    }
-                                    if (styleStr.includes('background-color:')) {
-                                      const bgMatch = styleStr.match(/background-color:\s*([^;]+)/)
-                                      if (bgMatch) {
-                                        inlineStyle.backgroundColor = bgMatch[1].trim()
-                                      }
-                                    }
-                                  }
-                                  return <span style={inlineStyle} {...props}>{children}</span>
-                                },
+                                span: ({node, ...props}) => <span {...props} />,
                                 table: ({node, ...props}) => (
                                   <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
                                     <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
@@ -767,46 +752,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 ),
                                 thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
                                 th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
-                                td: ({node, children, ...props}) => {
-                                  // Handle HTML content in table cells
-                                  const processContent = (content: any): any => {
-                                    if (typeof content === 'string') {
-                                      // Replace <br> with actual line breaks
-                                      if (content.includes('<br>')) {
-                                        const parts = content.split('<br>')
-                                        return parts.map((part, index) => (
-                                          <React.Fragment key={index}>
-                                            {part}
-                                            {index < parts.length - 1 && <br />}
-                                          </React.Fragment>
-                                        ))
-                                      }
-                                      // Handle span with styles
-                                      if (content.includes('<span')) {
-                                        return (
-                                          <div 
-                                            dangerouslySetInnerHTML={{ __html: content }}
-                                            className="inline"
-                                          />
-                                        )
-                                      }
-                                    }
-                                    return content
-                                  }
-
-                                  return (
-                                    <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props}>
-                                      {Array.isArray(children) 
-                                        ? children.map((child, index) => (
-                                            <React.Fragment key={index}>
-                                              {processContent(child)}
-                                            </React.Fragment>
-                                          ))
-                                        : processContent(children)
-                                      }
-                                    </td>
-                                  )
-                                },
+                                td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
                                 code: ({node, className, children, ...props}) => {
                                   const match = /language-(\w+)/.exec(className || '')
                                   return !match ? (
@@ -819,6 +765,13 @@ export default function ChatPage({ params }: ChatPageProps) {
                                     </div>
                                   )
                                 },
+                                blockquote: ({node, ...props}) => (
+                                  <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                                ),
+                                hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                                a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                                em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
                               }}
                             >
                               {message.content}
@@ -894,33 +847,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                         <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
+                            rehypePlugins={[rehypeHighlight, rehypeRaw]}
                             components={{
                               h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
                               h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
                               h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
                               p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
+                              ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                              ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                              li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                               br: ({node, ...props}) => <br {...props} />,
-                              span: ({node, style, children, ...props}) => {
-                                // Handle inline styles for colors and backgrounds
-                                const inlineStyle: React.CSSProperties = {}
-                                if (style) {
-                                  const styleStr = style.toString()
-                                  if (styleStr.includes('color:')) {
-                                    const colorMatch = styleStr.match(/color:\s*([^;]+)/)
-                                    if (colorMatch) {
-                                      inlineStyle.color = colorMatch[1].trim()
-                                    }
-                                  }
-                                  if (styleStr.includes('background-color:')) {
-                                    const bgMatch = styleStr.match(/background-color:\s*([^;]+)/)
-                                    if (bgMatch) {
-                                      inlineStyle.backgroundColor = bgMatch[1].trim()
-                                    }
-                                  }
-                                }
-                                return <span style={inlineStyle} {...props}>{children}</span>
-                              },
+                              span: ({node, ...props}) => <span {...props} />,
                               table: ({node, ...props}) => (
                                 <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
                                   <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
@@ -928,46 +865,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                               ),
                               thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
                               th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
-                              td: ({node, children, ...props}) => {
-                                // Handle HTML content in table cells
-                                const processContent = (content: any): any => {
-                                  if (typeof content === 'string') {
-                                    // Replace <br> with actual line breaks
-                                    if (content.includes('<br>')) {
-                                      const parts = content.split('<br>')
-                                      return parts.map((part, index) => (
-                                        <React.Fragment key={index}>
-                                          {part}
-                                          {index < parts.length - 1 && <br />}
-                                        </React.Fragment>
-                                      ))
-                                    }
-                                    // Handle span with styles
-                                    if (content.includes('<span')) {
-                                      return (
-                                        <div 
-                                          dangerouslySetInnerHTML={{ __html: content }}
-                                          className="inline"
-                                        />
-                                      )
-                                    }
-                                  }
-                                  return content
-                                }
-
-                                return (
-                                  <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props}>
-                                    {Array.isArray(children) 
-                                      ? children.map((child, index) => (
-                                          <React.Fragment key={index}>
-                                            {processContent(child)}
-                                          </React.Fragment>
-                                        ))
-                                      : processContent(children)
-                                    }
-                                  </td>
-                                )
-                              },
+                              td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
                               code: ({node, className, children, ...props}) => {
                                 const match = /language-(\w+)/.exec(className || '')
                                 return !match ? (
@@ -980,6 +878,13 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   </div>
                                 )
                               },
+                              blockquote: ({node, ...props}) => (
+                                <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                              ),
+                              hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                              a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
+                              strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                              em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
                             }}
                           >
                             {streamingMessage}
