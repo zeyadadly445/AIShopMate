@@ -310,7 +310,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     <h3 className="font-semibold text-gray-900">الألوان الأساسية</h3>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         اللون الأساسي (Header & User Messages)
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -323,14 +323,14 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.primaryColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, primaryColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#007bff"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         اللون الثانوي
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -343,14 +343,14 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.secondaryColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#6c757d"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         خلفية الصفحة
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -363,7 +363,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.backgroundColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#ffffff"
                         />
                       </div>
@@ -375,7 +375,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     <h3 className="font-semibold text-gray-900">ألوان الرسائل</h3>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         لون رسائل المستخدم
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -388,14 +388,14 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.userMessageColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, userMessageColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#007bff"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         لون رسائل البوت
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -408,14 +408,14 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.botMessageColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, botMessageColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#f8f9fa"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         لون النص
                       </label>
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -428,7 +428,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         <Input
                           value={customization.textColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, textColor: e.target.value }))}
-                          className="flex-1"
+                          className="flex-1 text-gray-900 font-medium"
                           placeholder="#333333"
                         />
                       </div>
@@ -440,13 +440,13 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     <h3 className="font-semibold text-gray-900">خيارات التصميم</h3>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         نوع الخط
                       </label>
                       <select
                         value={customization.fontFamily}
                         onChange={(e) => setCustomization(prev => ({ ...prev, fontFamily: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg text-gray-900 font-medium"
                       >
                         <option value="Inter">Inter (حديث)</option>
                         <option value="Cairo">Cairo (عربي)</option>
@@ -457,13 +457,13 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         انحناء الحواف
                       </label>
                       <select
                         value={customization.borderRadius}
                         onChange={(e) => setCustomization(prev => ({ ...prev, borderRadius: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg text-gray-900 font-medium"
                       >
                         <option value="small">مربع (8px)</option>
                         <option value="medium">متوسط (12px)</option>
@@ -473,13 +473,13 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         نمط الحركة
                       </label>
                       <select
                         value={customization.animationStyle}
                         onChange={(e) => setCustomization(prev => ({ ...prev, animationStyle: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg text-gray-900 font-medium"
                       >
                         <option value="none">بدون حركة</option>
                         <option value="smooth">ناعم</option>
@@ -494,13 +494,13 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     <h3 className="font-semibold text-gray-900">خيارات متقدمة</h3>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         أسلوب الهيدر
                       </label>
                       <select
                         value={customization.headerStyle}
                         onChange={(e) => setCustomization(prev => ({ ...prev, headerStyle: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg text-gray-900 font-medium"
                       >
                         <option value="modern">حديث</option>
                         <option value="classic">كلاسيكي</option>
@@ -510,13 +510,13 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         أسلوب الرسائل
                       </label>
                       <select
                         value={customization.messageStyle}
                         onChange={(e) => setCustomization(prev => ({ ...prev, messageStyle: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg text-gray-900 font-medium"
                       >
                         <option value="rounded">دائري</option>
                         <option value="square">مربع</option>
@@ -526,13 +526,14 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         رابط الصورة الشخصية (اختياري)
                       </label>
                       <Input
                         value={customization.logoUrl || ''}
                         onChange={(e) => setCustomization(prev => ({ ...prev, logoUrl: e.target.value }))}
                         placeholder="https://example.com/logo.png"
+                        className="text-gray-900 font-medium"
                       />
                     </div>
                   </div>
@@ -570,59 +571,62 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
                       رسالة الترحيب
                     </label>
                     <textarea
                       value={customization.welcomeMessage}
                       onChange={(e) => setCustomization(prev => ({ ...prev, welcomeMessage: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                      className="w-full p-3 border border-gray-300 rounded-lg resize-none text-gray-900 font-medium"
                       rows={3}
                       placeholder="مرحبا! كيف يمكنني مساعدتك اليوم؟"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-800 mt-1 font-medium">
                       هذه هي أول رسالة يراها العميل عند فتح الشات
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         نص صندوق الإدخال
                       </label>
                       <Input
                         value={customization.placeholderText}
                         onChange={(e) => setCustomization(prev => ({ ...prev, placeholderText: e.target.value }))}
                         placeholder="اكتب رسالتك هنا..."
+                        className="text-gray-900 font-medium"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         نص زر الإرسال
                       </label>
                       <Input
                         value={customization.sendButtonText}
                         onChange={(e) => setCustomization(prev => ({ ...prev, sendButtonText: e.target.value }))}
                         placeholder="إرسال"
+                        className="text-gray-900 font-medium"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
                         نص مؤشر الكتابة
                       </label>
                       <Input
                         value={customization.typingIndicator}
                         onChange={(e) => setCustomization(prev => ({ ...prev, typingIndicator: e.target.value }))}
                         placeholder="يكتب..."
+                        className="text-gray-900 font-medium"
                       />
                     </div>
                   </div>
 
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2">ℹ️ ملاحظة مهمة</h4>
-                    <p className="text-sm text-blue-700">
+                    <h4 className="text-sm font-bold text-blue-900 mb-2">ℹ️ ملاحظة مهمة</h4>
+                    <p className="text-sm text-blue-800 font-medium">
                       رسائل الحدود (تجاوز الحد اليومي/الشهري) والرسائل الإجبارية يتم توليدها تلقائياً بناءً على لغة المستخدم ولا يمكن تخصيصها لضمان وضوح المعلومات المهمة.
                     </p>
                   </div>
@@ -632,7 +636,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                   <button
                     onClick={saveCustomization}
                     disabled={isSaving}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-bold"
                   >
                     💾 حفظ النصوص
                   </button>

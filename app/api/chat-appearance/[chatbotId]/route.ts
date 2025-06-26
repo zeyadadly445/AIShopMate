@@ -32,7 +32,7 @@ export async function GET(
     // البحث عن التاجر باستخدام chatbotId
     const { data: merchant, error: merchantError } = await supabase
       .from('Merchant')
-      .select('id, primaryColor, logoUrl, welcomeMessage')
+      .select('id, primaryColor, welcomeMessage')
       .eq('chatbotId', chatbotId)
       .single()
 
@@ -90,7 +90,7 @@ export async function GET(
       headerStyle: customizations?.headerStyle || 'modern',
       messageStyle: customizations?.messageStyle || 'rounded',
       animationStyle: customizations?.animationStyle || 'smooth',
-      logoUrl: customizations?.logoUrl || merchant.logoUrl,
+      logoUrl: customizations?.logoUrl,
       welcomeMessage: customizations?.welcomeMessage || merchant.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك؟',
       placeholderText: customizations?.placeholderText || 'اكتب رسالتك هنا...',
       sendButtonText: customizations?.sendButtonText || 'إرسال',
@@ -265,8 +265,7 @@ export async function POST(
       .from('Merchant')
       .update({
         primaryColor: body.primaryColor,
-        welcomeMessage: body.welcomeMessage,
-        logoUrl: body.logoUrl
+        welcomeMessage: body.welcomeMessage
       })
       .eq('id', merchant.id)
 
