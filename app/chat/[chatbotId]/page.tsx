@@ -732,8 +732,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
                           <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
-                            {/* Check if content contains HTML blocks */}
-                            {message.content.includes('<div') || message.content.includes('<span style=') ? (
+                            {/* Check if content contains complex HTML blocks (full div structures) */}
+                            {message.content.includes('<div style=') && message.content.includes('</div>') ? (
                               <div 
                                 dangerouslySetInnerHTML={{ __html: message.content }}
                                 className="prose prose-sm max-w-none"
@@ -856,8 +856,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                         }}
                       >
                         <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
-                          {/* Check if content contains HTML blocks */}
-                          {streamingMessage.includes('<div') || streamingMessage.includes('<span style=') ? (
+                          {/* Check if content contains complex HTML blocks (full div structures) */}
+                          {streamingMessage.includes('<div style=') && streamingMessage.includes('</div>') ? (
                             <div 
                               dangerouslySetInnerHTML={{ __html: streamingMessage }}
                               className="prose prose-sm max-w-none"
