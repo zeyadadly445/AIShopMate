@@ -732,50 +732,61 @@ export default function ChatPage({ params }: ChatPageProps) {
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
                           <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                              components={{
-                                h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
-                                h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
-                                p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                                li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
-                                br: ({node, ...props}) => <br {...props} />,
-                                span: ({node, ...props}) => <span {...props} />,
-                                table: ({node, ...props}) => (
-                                  <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
-                                    <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
-                                  </div>
-                                ),
-                                thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
-                                th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
-                                td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
-                                code: ({node, className, children, ...props}) => {
-                                  const match = /language-(\w+)/.exec(className || '')
-                                  return !match ? (
-                                    <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
-                                      {children}
-                                    </code>
-                                  ) : (
-                                    <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
-                                      <code {...props}>{children}</code>
+                            {/* Check if content contains HTML blocks */}
+                            {message.content.includes('<div') || message.content.includes('<span style=') ? (
+                              <div 
+                                dangerouslySetInnerHTML={{ __html: message.content }}
+                                className="prose prose-sm max-w-none"
+                                style={{
+                                  color: customization?.textColor || '#1f2937'
+                                }}
+                              />
+                            ) : (
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                                components={{
+                                  h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
+                                  h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
+                                  h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
+                                  p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
+                                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                  li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
+                                  br: ({node, ...props}) => <br {...props} />,
+                                  span: ({node, ...props}) => <span {...props} />,
+                                  table: ({node, ...props}) => (
+                                    <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
+                                      <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                     </div>
-                                  )
-                                },
-                                blockquote: ({node, ...props}) => (
-                                  <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
-                                ),
-                                hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
-                                a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
-                                strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
-                                em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
+                                  ),
+                                  thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
+                                  th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
+                                  td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
+                                  code: ({node, className, children, ...props}) => {
+                                    const match = /language-(\w+)/.exec(className || '')
+                                    return !match ? (
+                                      <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
+                                        {children}
+                                      </code>
+                                    ) : (
+                                      <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
+                                        <code {...props}>{children}</code>
+                                      </div>
+                                    )
+                                  },
+                                  blockquote: ({node, ...props}) => (
+                                    <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                                  ),
+                                  hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                                  a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
+                                  strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                                  em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
+                            )}
                           </div>
                         )}
 
@@ -845,50 +856,61 @@ export default function ChatPage({ params }: ChatPageProps) {
                         }}
                       >
                         <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                            components={{
-                              h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
-                              h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
-                              h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
-                              p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
-                              ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                              ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                              li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
-                              br: ({node, ...props}) => <br {...props} />,
-                              span: ({node, ...props}) => <span {...props} />,
-                              table: ({node, ...props}) => (
-                                <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
-                                  <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
-                                </div>
-                              ),
-                              thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
-                              th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
-                              td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
-                              code: ({node, className, children, ...props}) => {
-                                const match = /language-(\w+)/.exec(className || '')
-                                return !match ? (
-                                  <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
-                                    {children}
-                                  </code>
-                                ) : (
-                                  <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
-                                    <code {...props}>{children}</code>
+                          {/* Check if content contains HTML blocks */}
+                          {streamingMessage.includes('<div') || streamingMessage.includes('<span style=') ? (
+                            <div 
+                              dangerouslySetInnerHTML={{ __html: streamingMessage }}
+                              className="prose prose-sm max-w-none"
+                              style={{
+                                color: customization?.textColor || '#1f2937'
+                              }}
+                            />
+                          ) : (
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                              components={{
+                                h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
+                                p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
+                                br: ({node, ...props}) => <br {...props} />,
+                                span: ({node, ...props}) => <span {...props} />,
+                                table: ({node, ...props}) => (
+                                  <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
+                                    <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                   </div>
-                                )
-                              },
-                              blockquote: ({node, ...props}) => (
-                                <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
-                              ),
-                              hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
-                              a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
-                              strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
-                              em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
-                            }}
-                          >
-                            {streamingMessage}
-                          </ReactMarkdown>
+                                ),
+                                thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
+                                th: ({node, ...props}) => <th className="border-b border-gray-200 px-2 sm:px-3 py-1 sm:py-2 font-semibold text-gray-900 text-left text-xs sm:text-sm" {...props} />,
+                                td: ({node, ...props}) => <td className="border-b border-gray-100 px-2 sm:px-3 py-1 sm:py-2 text-gray-800 text-xs sm:text-sm" {...props} />,
+                                code: ({node, className, children, ...props}) => {
+                                  const match = /language-(\w+)/.exec(className || '')
+                                  return !match ? (
+                                    <code className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
+                                      {children}
+                                    </code>
+                                  ) : (
+                                    <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
+                                      <code {...props}>{children}</code>
+                                    </div>
+                                  )
+                                },
+                                blockquote: ({node, ...props}) => (
+                                  <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                                ),
+                                hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                                a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                                em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
+                              }}
+                            >
+                              {streamingMessage}
+                            </ReactMarkdown>
+                          )}
                         </div>
                         
                         {/* Typing indicator */}
