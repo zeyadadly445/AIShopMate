@@ -15,15 +15,14 @@ interface ChatCustomization {
   textColor: string
   fontFamily: string
   borderRadius: string
-  chatHeaderStyle: string
+  headerStyle: string
   messageStyle: string
-  inputStyle: string
-  animation: string
+  animationStyle: string
   logoUrl?: string
   welcomeMessage: string
   placeholderText: string
   sendButtonText: string
-  typingIndicatorText: string
+  typingIndicator: string
 }
 
 interface CustomizePageProps {
@@ -33,22 +32,21 @@ interface CustomizePageProps {
 export default function CustomizePage({ params }: CustomizePageProps) {
   const [chatbotId, setChatbotId] = useState<string>('')
   const [customization, setCustomization] = useState<ChatCustomization>({
-    primaryColor: '#3b82f6',
-    secondaryColor: '#64748b',
-    backgroundColor: '#f8fafc',
-    userMessageColor: '#3b82f6',
-    botMessageColor: '#ffffff',
-    textColor: '#1f2937',
+    primaryColor: '#007bff',
+    secondaryColor: '#6c757d',
+    backgroundColor: '#ffffff',
+    userMessageColor: '#007bff',
+    botMessageColor: '#f8f9fa',
+    textColor: '#333333',
     fontFamily: 'Inter',
-    borderRadius: '16px',
-    chatHeaderStyle: 'modern',
+    borderRadius: 'medium',
+    headerStyle: 'modern',
     messageStyle: 'rounded',
-    inputStyle: 'modern',
-    animation: 'smooth',
-    welcomeMessage: 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+    animationStyle: 'smooth',
+    welcomeMessage: 'مرحبا! كيف يمكنني مساعدتك؟',
     placeholderText: 'اكتب رسالتك هنا...',
     sendButtonText: 'إرسال',
-    typingIndicatorText: 'يكتب...'
+    typingIndicator: 'يكتب...'
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -131,22 +129,21 @@ export default function CustomizePage({ params }: CustomizePageProps) {
 
   const resetToDefaults = () => {
     setCustomization({
-      primaryColor: '#3b82f6',
-      secondaryColor: '#64748b',
-      backgroundColor: '#f8fafc',
-      userMessageColor: '#3b82f6',
-      botMessageColor: '#ffffff',
-      textColor: '#1f2937',
+      primaryColor: '#007bff',
+      secondaryColor: '#6c757d',
+      backgroundColor: '#ffffff',
+      userMessageColor: '#007bff',
+      botMessageColor: '#f8f9fa',
+      textColor: '#333333',
       fontFamily: 'Inter',
-      borderRadius: '16px',
-      chatHeaderStyle: 'modern',
+      borderRadius: 'medium',
+      headerStyle: 'modern',
       messageStyle: 'rounded',
-      inputStyle: 'modern',
-      animation: 'smooth',
-      welcomeMessage: 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+      animationStyle: 'smooth',
+      welcomeMessage: 'مرحبا! كيف يمكنني مساعدتك؟',
       placeholderText: 'اكتب رسالتك هنا...',
       sendButtonText: 'إرسال',
-      typingIndicatorText: 'يكتب...'
+      typingIndicator: 'يكتب...'
     })
   }
 
@@ -288,7 +285,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.primaryColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, primaryColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#3b82f6"
+                          placeholder="#007bff"
                         />
                       </div>
                     </div>
@@ -308,7 +305,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.secondaryColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, secondaryColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#64748b"
+                          placeholder="#6c757d"
                         />
                       </div>
                     </div>
@@ -328,7 +325,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.backgroundColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, backgroundColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#f8fafc"
+                          placeholder="#ffffff"
                         />
                       </div>
                     </div>
@@ -353,7 +350,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.userMessageColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, userMessageColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#3b82f6"
+                          placeholder="#007bff"
                         />
                       </div>
                     </div>
@@ -373,7 +370,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.botMessageColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, botMessageColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#ffffff"
+                          placeholder="#f8f9fa"
                         />
                       </div>
                     </div>
@@ -393,7 +390,7 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                           value={customization.textColor}
                           onChange={(e) => setCustomization(prev => ({ ...prev, textColor: e.target.value }))}
                           className="flex-1"
-                          placeholder="#1f2937"
+                          placeholder="#333333"
                         />
                       </div>
                     </div>
@@ -429,11 +426,10 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         onChange={(e) => setCustomization(prev => ({ ...prev, borderRadius: e.target.value }))}
                         className="w-full p-2 border border-gray-300 rounded-lg"
                       >
-                        <option value="8px">مربع (8px)</option>
-                        <option value="12px">قليل (12px)</option>
-                        <option value="16px">متوسط (16px)</option>
-                        <option value="24px">دائري (24px)</option>
-                        <option value="9999px">دائري تماماً</option>
+                        <option value="small">مربع (8px)</option>
+                        <option value="medium">متوسط (12px)</option>
+                        <option value="large">دائري (16px)</option>
+                        <option value="full">دائري تماماً</option>
                       </select>
                     </div>
 
@@ -442,8 +438,8 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         نمط الحركة
                       </label>
                       <select
-                        value={customization.animation}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, animation: e.target.value }))}
+                        value={customization.animationStyle}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, animationStyle: e.target.value }))}
                         className="w-full p-2 border border-gray-300 rounded-lg"
                       >
                         <option value="none">بدون حركة</option>
@@ -463,8 +459,8 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         أسلوب الهيدر
                       </label>
                       <select
-                        value={customization.chatHeaderStyle}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, chatHeaderStyle: e.target.value }))}
+                        value={customization.headerStyle}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, headerStyle: e.target.value }))}
                         className="w-full p-2 border border-gray-300 rounded-lg"
                       >
                         <option value="modern">حديث</option>
@@ -578,8 +574,8 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         نص مؤشر الكتابة
                       </label>
                       <Input
-                        value={customization.typingIndicatorText}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, typingIndicatorText: e.target.value }))}
+                        value={customization.typingIndicator}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, typingIndicator: e.target.value }))}
                         placeholder="يكتب..."
                       />
                     </div>
@@ -664,7 +660,9 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                         style={{
                           backgroundColor: message.role === 'user' ? customization.userMessageColor : customization.botMessageColor,
                           color: message.role === 'user' ? 'white' : customization.textColor,
-                          borderRadius: customization.borderRadius,
+                          borderRadius: customization.borderRadius === 'small' ? '8px' : 
+                                       customization.borderRadius === 'medium' ? '12px' :
+                                       customization.borderRadius === 'large' ? '16px' : '9999px',
                           fontFamily: customization.fontFamily
                         }}
                       >
@@ -680,7 +678,9 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                     <div 
                       className="flex-1 px-3 py-2 bg-gray-100 text-xs"
                       style={{ 
-                        borderRadius: customization.borderRadius,
+                        borderRadius: customization.borderRadius === 'small' ? '8px' : 
+                                     customization.borderRadius === 'medium' ? '12px' :
+                                     customization.borderRadius === 'large' ? '16px' : '9999px',
                         fontFamily: customization.fontFamily,
                         color: customization.textColor
                       }}
@@ -691,7 +691,9 @@ export default function CustomizePage({ params }: CustomizePageProps) {
                       className="px-3 py-2 text-white text-xs"
                       style={{ 
                         backgroundColor: customization.primaryColor,
-                        borderRadius: customization.borderRadius
+                        borderRadius: customization.borderRadius === 'small' ? '8px' : 
+                                     customization.borderRadius === 'medium' ? '12px' :
+                                     customization.borderRadius === 'large' ? '16px' : '9999px'
                       }}
                     >
                       {customization.sendButtonText}
