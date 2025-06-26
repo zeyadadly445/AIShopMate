@@ -651,7 +651,7 @@ export default function ChatPage({ params }: ChatPageProps) {
       </div>
 
       {/* Chat Container */}
-      <div className="relative z-10 max-w-4xl mx-auto p-2 sm:p-4 lg:p-6">
+      <div className="relative z-10 w-full mx-auto p-2 sm:p-4 lg:p-6">
         <div className="h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)] flex flex-col">
           
           {/* Messages Area */}
@@ -685,8 +685,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                   >
                     <div className={`group relative ${
                       message.role === 'user' 
-                        ? 'max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl ml-2 sm:ml-8 md:ml-12' 
-                        : 'max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12'
+                        ? 'max-w-[95%] ml-2' 
+                        : 'max-w-[95%] mr-2'
                     }`}>
                       
                       {/* Message Bubble */}
@@ -731,7 +731,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                         {message.role === 'user' ? (
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
-                          <div className="text-sm sm:text-base leading-relaxed w-full">
+                          <div className="text-sm sm:text-base md:text-lg leading-relaxed w-full">
                             {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
                             {(() => {
                               const content = message.content.trim()
@@ -778,6 +778,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
                                   .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                   
+                                  // Tables - ensure full width usage
+                                  .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
+                                  
                                   // Paragraph breaks and line breaks
                                   .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
                                   .replace(/\n/g, '<br>') // line breaks
@@ -790,6 +793,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                       width: '100%',
                                       lineHeight: '1.5'
                                     }}
+                                    className="w-full overflow-x-auto"
                                   />
                                 )
                               }
@@ -810,8 +814,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                                     br: ({node, ...props}) => <br {...props} />,
                                     span: ({node, ...props}) => <span {...props} />,
                                     table: ({node, ...props}) => (
-                                      <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200">
-                                        <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
+                                      <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200 w-full">
+                                        <table className="w-full text-xs sm:text-sm bg-white" {...props} />
                                       </div>
                                     ),
                                     thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
@@ -894,7 +898,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 {/* Streaming message display */}
                 {isStreaming && streamingMessage && (
                   <div className="flex justify-start">
-                    <div className="group relative max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12">
+                    <div className="group relative max-w-[95%] mr-2">
                       <div 
                         className="relative px-3 sm:px-4 lg:px-5 py-3 sm:py-4 backdrop-blur-xl border border-white/15 shadow-xl"
                         style={{
@@ -910,7 +914,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                           `
                         }}
                       >
-                        <div className="text-sm sm:text-base leading-relaxed w-full">
+                        <div className="text-sm sm:text-base md:text-lg leading-relaxed w-full">
                           {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
                           {(() => {
                             const content = streamingMessage.trim()
@@ -957,6 +961,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
                                 .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                 
+                                // Tables - ensure full width usage
+                                .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
+                                
                                 // Paragraph breaks and line breaks
                                 .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
                                 .replace(/\n/g, '<br>') // line breaks
@@ -969,6 +976,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                     width: '100%',
                                     lineHeight: '1.5'
                                   }}
+                                  className="w-full overflow-x-auto"
                                 />
                               )
                             }
@@ -989,8 +997,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   br: ({node, ...props}) => <br {...props} />,
                                   span: ({node, ...props}) => <span {...props} />,
                                   table: ({node, ...props}) => (
-                                    <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200">
-                                      <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
+                                    <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200 w-full">
+                                      <table className="w-full text-xs sm:text-sm bg-white" {...props} />
                                     </div>
                                   ),
                                   thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
@@ -1064,7 +1072,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 {/* Loading indicator for initial processing */}
                 {isLoading && !isStreaming && (
                   <div className="flex justify-start">
-                    <div className="group relative max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12">
+                    <div className="group relative max-w-[95%] mr-2">
                       <div 
                         className="relative px-3 sm:px-4 lg:px-5 py-3 sm:py-4 backdrop-blur-xl border border-white/15 shadow-xl"
                         style={{
