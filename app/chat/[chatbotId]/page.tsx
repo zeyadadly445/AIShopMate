@@ -731,7 +731,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                         {message.role === 'user' ? (
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
-                          <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
+                          <div className="text-sm sm:text-base leading-relaxed w-full">
                             {/* Simple and effective content rendering */}
                             {(() => {
                               const content = message.content.trim()
@@ -743,20 +743,21 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 // Convert basic markdown to HTML first
                                 let processedContent = content
                                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
-                                  .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 10px 0; color: #333;">$1</h3>$2') // ### header
-                                  .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 12px 0; color: #333;">$1</h2>$2') // ## header
-                                  .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 15px 0; color: #333;">$1</h1>$2') // # header
-                                  .replace(/^- (.*?)$/gm, '<li style="margin: 2px 0; color: #333;">$1</li>') // - list items
-                                  .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 10px 0; padding-right: 20px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
-                                  .replace(/\n\n/g, '<br><br>') // paragraph breaks
+                                  .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 4px 0; color: #333;">$1</h3>$2') // ### header
+                                  .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 5px 0; color: #333;">$1</h2>$2') // ## header
+                                  .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 6px 0; color: #333;">$1</h1>$2') // # header
+                                  .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333;">$1</li>') // - list items
+                                  .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
+                                  .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks - smaller spacing
                                   .replace(/\n/g, '<br>') // line breaks
                                 
                                 return (
                                   <div 
                                     dangerouslySetInnerHTML={{ __html: processedContent }}
-                                    className="prose prose-sm max-w-none"
                                     style={{
-                                      color: customization?.textColor || '#1f2937'
+                                      color: customization?.textColor || '#1f2937',
+                                      width: '100%',
+                                      lineHeight: '1.5'
                                     }}
                                   />
                                 )
@@ -768,17 +769,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   remarkPlugins={[remarkGfm]}
                                   rehypePlugins={[rehypeHighlight, rehypeRaw]}
                                   components={{
-                                    h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
-                                    h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
-                                    h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
-                                    p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
-                                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                    h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2" {...props} />,
+                                    h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-1" {...props} />,
+                                    h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-1" {...props} />,
+                                    p: ({node, ...props}) => <p className="text-gray-800 mb-1 sm:mb-2 leading-relaxed" {...props} />,
+                                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
+                                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
                                     li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                     br: ({node, ...props}) => <br {...props} />,
                                     span: ({node, ...props}) => <span {...props} />,
                                     table: ({node, ...props}) => (
-                                      <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
+                                      <div className="overflow-x-auto mb-2 sm:mb-3 rounded-lg border border-gray-200">
                                         <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                       </div>
                                     ),
@@ -792,15 +793,15 @@ export default function ChatPage({ params }: ChatPageProps) {
                                           {children}
                                         </code>
                                       ) : (
-                                        <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
+                                        <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-1 sm:my-2 border border-gray-200">
                                           <code {...props}>{children}</code>
                                         </div>
                                       )
                                     },
                                     blockquote: ({node, ...props}) => (
-                                      <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                                      <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 sm:mb-2 rounded-r-lg text-sm" {...props} />
                                     ),
-                                    hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                                    hr: ({node, ...props}) => <hr className="border-gray-300 my-2 sm:my-3" {...props} />,
                                     a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
                                     strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
                                     em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
@@ -878,7 +879,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                           `
                         }}
                       >
-                        <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
+                        <div className="text-sm sm:text-base leading-relaxed w-full">
                           {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
                           {(() => {
                             const content = streamingMessage.trim()
@@ -890,20 +891,21 @@ export default function ChatPage({ params }: ChatPageProps) {
                               // Convert basic markdown to HTML first
                               let processedContent = content
                                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
-                                .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 10px 0; color: #333;">$1</h3>$2') // ### header
-                                .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 12px 0; color: #333;">$1</h2>$2') // ## header
-                                .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 15px 0; color: #333;">$1</h1>$2') // # header
-                                .replace(/^- (.*?)$/gm, '<li style="margin: 2px 0; color: #333;">$1</li>') // - list items
-                                .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 10px 0; padding-right: 20px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
-                                .replace(/\n\n/g, '<br><br>') // paragraph breaks
+                                .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 4px 0; color: #333;">$1</h3>$2') // ### header
+                                .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 5px 0; color: #333;">$1</h2>$2') // ## header
+                                .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 6px 0; color: #333;">$1</h1>$2') // # header
+                                .replace(/^- (.*?)$/gm, '<li style="margin: 1px 0; color: #333;">$1</li>') // - list items
+                                .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
+                                .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks - smaller spacing
                                 .replace(/\n/g, '<br>') // line breaks
                               
                               return (
                                 <div 
                                   dangerouslySetInnerHTML={{ __html: processedContent }}
-                                  className="prose prose-sm max-w-none"
                                   style={{
-                                    color: customization?.textColor || '#1f2937'
+                                    color: customization?.textColor || '#1f2937',
+                                    width: '100%',
+                                    lineHeight: '1.5'
                                   }}
                                 />
                               )
@@ -915,17 +917,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeHighlight, rehypeRaw]}
                                 components={{
-                                  h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 border-b border-gray-200 pb-2" {...props} />,
-                                  h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2" {...props} />,
-                                  h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-2" {...props} />,
-                                  p: ({node, ...props}) => <p className="text-gray-800 mb-2 sm:mb-3 leading-relaxed" {...props} />,
-                                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
-                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 sm:mb-3 text-gray-800 space-y-1" {...props} />,
+                                  h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2" {...props} />,
+                                  h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-1" {...props} />,
+                                  h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-1" {...props} />,
+                                  p: ({node, ...props}) => <p className="text-gray-800 mb-1 sm:mb-2 leading-relaxed" {...props} />,
+                                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
+                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
                                   li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                   br: ({node, ...props}) => <br {...props} />,
                                   span: ({node, ...props}) => <span {...props} />,
                                   table: ({node, ...props}) => (
-                                    <div className="overflow-x-auto mb-3 sm:mb-4 rounded-lg border border-gray-200">
+                                    <div className="overflow-x-auto mb-2 sm:mb-3 rounded-lg border border-gray-200">
                                       <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                     </div>
                                   ),
@@ -939,15 +941,15 @@ export default function ChatPage({ params }: ChatPageProps) {
                                         {children}
                                       </code>
                                     ) : (
-                                      <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-2 sm:my-3 border border-gray-200">
+                                      <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-1 sm:my-2 border border-gray-200">
                                         <code {...props}>{children}</code>
                                       </div>
                                     )
                                   },
                                   blockquote: ({node, ...props}) => (
-                                    <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-2 bg-blue-50 text-gray-800 italic mb-2 sm:mb-3 rounded-r-lg text-sm" {...props} />
+                                    <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 sm:mb-2 rounded-r-lg text-sm" {...props} />
                                   ),
-                                  hr: ({node, ...props}) => <hr className="border-gray-300 my-3 sm:my-4" {...props} />,
+                                  hr: ({node, ...props}) => <hr className="border-gray-300 my-2 sm:my-3" {...props} />,
                                   a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
                                   strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
                                   em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
