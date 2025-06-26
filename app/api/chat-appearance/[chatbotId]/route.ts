@@ -10,15 +10,14 @@ interface ChatCustomization {
   textColor: string
   fontFamily: string
   borderRadius: string
-  chatHeaderStyle: string
+  headerStyle: string
   messageStyle: string
-  inputStyle: string
-  animation: string
+  animationStyle: string
   logoUrl?: string
   welcomeMessage: string
   placeholderText: string
   sendButtonText: string
-  typingIndicatorText: string
+  typingIndicator: string
 }
 
 // GET - تحميل التخصيصات
@@ -54,23 +53,22 @@ export async function GET(
 
     // إرجاع التخصيصات أو القيم الافتراضية
     const result: ChatCustomization = {
-      primaryColor: customizations?.primaryColor || merchant.primaryColor || '#3b82f6',
-      secondaryColor: customizations?.secondaryColor || '#64748b',
-      backgroundColor: customizations?.backgroundColor || '#f8fafc',
-      userMessageColor: customizations?.userMessageColor || merchant.primaryColor || '#3b82f6',
-      botMessageColor: customizations?.botMessageColor || '#ffffff',
-      textColor: customizations?.textColor || '#1f2937',
+      primaryColor: customizations?.primaryColor || merchant.primaryColor || '#007bff',
+      secondaryColor: customizations?.secondaryColor || '#6c757d',
+      backgroundColor: customizations?.backgroundColor || '#ffffff',
+      userMessageColor: customizations?.userMessageColor || merchant.primaryColor || '#007bff',
+      botMessageColor: customizations?.botMessageColor || '#f8f9fa',
+      textColor: customizations?.textColor || '#333333',
       fontFamily: customizations?.fontFamily || 'Inter',
-      borderRadius: customizations?.borderRadius || '16px',
-      chatHeaderStyle: customizations?.chatHeaderStyle || 'modern',
+      borderRadius: customizations?.borderRadius || 'medium',
+      headerStyle: customizations?.headerStyle || 'modern',
       messageStyle: customizations?.messageStyle || 'rounded',
-      inputStyle: customizations?.inputStyle || 'modern',
-      animation: customizations?.animation || 'smooth',
+      animationStyle: customizations?.animationStyle || 'smooth',
       logoUrl: customizations?.logoUrl || merchant.logoUrl,
-      welcomeMessage: customizations?.welcomeMessage || merchant.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك اليوم؟',
+      welcomeMessage: customizations?.welcomeMessage || merchant.welcomeMessage || 'مرحبا! كيف يمكنني مساعدتك؟',
       placeholderText: customizations?.placeholderText || 'اكتب رسالتك هنا...',
       sendButtonText: customizations?.sendButtonText || 'إرسال',
-      typingIndicatorText: customizations?.typingIndicatorText || 'يكتب...'
+      typingIndicator: customizations?.typingIndicator || 'يكتب...'
     }
 
     return NextResponse.json(result)
@@ -122,15 +120,14 @@ export async function POST(
       textColor: body.textColor,
       fontFamily: body.fontFamily,
       borderRadius: body.borderRadius,
-      chatHeaderStyle: body.chatHeaderStyle,
+      headerStyle: body.headerStyle,
       messageStyle: body.messageStyle,
-      inputStyle: body.inputStyle,
-      animation: body.animation,
+      animationStyle: body.animationStyle,
       logoUrl: body.logoUrl,
       welcomeMessage: body.welcomeMessage,
       placeholderText: body.placeholderText,
       sendButtonText: body.sendButtonText,
-      typingIndicatorText: body.typingIndicatorText,
+      typingIndicator: body.typingIndicator,
       updatedAt: new Date().toISOString()
     }
 
