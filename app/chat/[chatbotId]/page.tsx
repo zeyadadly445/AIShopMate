@@ -682,7 +682,11 @@ export default function ChatPage({ params }: ChatPageProps) {
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`group relative max-w-[85%] sm:max-w-xs md:max-w-md lg:max-w-2xl ${message.role === 'user' ? 'ml-8 sm:ml-12' : 'mr-8 sm:mr-12'}`}>
+                    <div className={`group relative ${
+                      message.role === 'user' 
+                        ? 'max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl ml-2 sm:ml-8 md:ml-12' 
+                        : 'max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12'
+                    }`}>
                       
                       {/* Message Bubble */}
                       <div
@@ -803,7 +807,7 @@ export default function ChatPage({ params }: ChatPageProps) {
 
                       {/* Avatar for bot messages */}
                       {message.role === 'assistant' && (
-                        <div className="absolute -bottom-1 sm:-bottom-2 -left-2 sm:-left-3">
+                        <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 md:-left-3">
                           <div 
                             className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white backdrop-blur-sm"
                             style={{ 
@@ -821,7 +825,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 {/* Streaming message display */}
                 {isStreaming && streamingMessage && (
                   <div className="flex justify-start">
-                    <div className="group relative max-w-[85%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-8 sm:mr-12">
+                    <div className="group relative max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12">
                       <div 
                         className="relative px-3 sm:px-4 lg:px-5 py-3 sm:py-4 backdrop-blur-xl border border-white/15 shadow-xl"
                         style={{
@@ -888,7 +892,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                       </div>
 
                       {/* Streaming Avatar */}
-                      <div className="absolute -bottom-1 sm:-bottom-2 -left-2 sm:-left-3">
+                      <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 md:-left-3">
                         <div 
                           className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white animate-pulse backdrop-blur-sm"
                           style={{ 
@@ -905,7 +909,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 {/* Loading indicator for initial processing */}
                 {isLoading && !isStreaming && (
                   <div className="flex justify-start">
-                    <div className="group relative max-w-[85%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-8 sm:mr-12">
+                    <div className="group relative max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-2xl mr-2 sm:mr-8 md:mr-12">
                       <div 
                         className="relative px-3 sm:px-4 lg:px-5 py-3 sm:py-4 backdrop-blur-xl border border-white/15 shadow-xl"
                         style={{
@@ -938,7 +942,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                       </div>
 
                       {/* Loading Avatar */}
-                      <div className="absolute -bottom-1 sm:-bottom-2 -left-2 sm:-left-3">
+                      <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 md:-left-3">
                         <div 
                           className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white backdrop-blur-sm"
                           style={{ 
