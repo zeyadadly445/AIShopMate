@@ -113,6 +113,15 @@ ON CONFLICT ("merchantId") DO NOTHING;
 -- يتم إنتاجها تلقائياً عبر language-detector.ts 
 -- وهي إجبارية ولا تخضع للتخصيص لضمان وضوح المعلومات المهمة
 
--- عرض الجداول المرتبطة للتأكد
-\dt "ChatCustomization"
-\dt "Merchant" 
+-- عرض معلومات الجداول المرتبطة للتأكد
+SELECT table_name, table_type 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('ChatCustomization', 'Merchant');
+
+-- عرض structure جدول ChatCustomization
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND table_name = 'ChatCustomization'
+ORDER BY ordinal_position; 
