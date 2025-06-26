@@ -635,7 +635,10 @@ export default function DashboardPage() {
             <div className="p-4 border border-gray-200 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">2. تخصيص الشات بوت</h3>
               <p className="text-gray-900 text-sm mb-3">غير رسالة الترحيب والألوان حسب علامتك التجارية</p>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+              <button 
+                onClick={() => router.push(`/customize/${stats.merchant.chatbotId}`)}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+              >
                 تخصيص الشات بوت
               </button>
             </div>

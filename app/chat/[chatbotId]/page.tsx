@@ -18,6 +18,26 @@ interface Merchant {
   logoUrl?: string
 }
 
+interface ChatCustomization {
+  primaryColor: string
+  secondaryColor: string
+  backgroundColor: string
+  userMessageColor: string
+  botMessageColor: string
+  textColor: string
+  fontFamily: string
+  borderRadius: string
+  chatHeaderStyle: string
+  messageStyle: string
+  inputStyle: string
+  animation: string
+  logoUrl?: string
+  welcomeMessage: string
+  placeholderText: string
+  sendButtonText: string
+  typingIndicatorText: string
+}
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -32,6 +52,7 @@ interface ChatPageProps {
 export default function ChatPage({ params }: ChatPageProps) {
   const [chatbotId, setChatbotId] = useState<string>('')
   const [merchant, setMerchant] = useState<Merchant | null>(null)
+  const [customization, setCustomization] = useState<ChatCustomization | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -71,11 +92,24 @@ export default function ChatPage({ params }: ChatPageProps) {
 
     const loadMerchant = async () => {
       try {
-        // تحميل بيانات التاجر
-        const response = await fetch(`/api/merchant/${chatbotId}`)
-        if (response.ok) {
-          const merchantData = await response.json()
+        // تحميل بيانات التاجر والتخصيصات بالتوازي
+        const [merchantResponse, customizationResponse] = await Promise.all([
+          fetch(`/api/merchant/${chatbotId}`),
+          fetch(`/api/chat-appearance/${chatbotId}`)
+        ])
+        
+        if (merchantResponse.ok) {
+          const merchantData = await merchantResponse.json()
           setMerchant(merchantData)
+          
+          // تحميل التخصيصات
+          if (customizationResponse.ok) {
+            const customizationData = await customizationResponse.json()
+            setCustomization(customizationData)
+            console.log('🎨 Chat customization loaded:', customizationData)
+          } else {
+            console.log('🎨 No customization found, using defaults')
+          }
           
           // Load saved messages from localStorage
           const savedMessages = localStorage.getItem(storageKey)
@@ -152,6 +186,23 @@ export default function ChatPage({ params }: ChatPageProps) {
       })
     }
   }, [messages, storageKey, chatbotId])
+
+  // Update welcome message when customization is loaded
+  useEffect(() => {
+    if (customization && messages.length > 0 && messages[0].role === 'assistant') {
+      const currentWelcome = customization.welcomeMessage
+      if (messages[0].content !== currentWelcome) {
+        setMessages(prev => [
+          {
+            ...prev[0],
+            content: currentWelcome
+          },
+          ...prev.slice(1)
+        ])
+        console.log('🎨 Welcome message updated from customization')
+      }
+    }
+  }, [customization])
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -410,28 +461,39 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   return (
     <div 
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50"
+      className="min-h-screen"
       style={{ 
-        background: `linear-gradient(135deg, ${merchant.primaryColor}10, ${merchant.primaryColor}05)`
+        background: customization 
+          ? `linear-gradient(135deg, ${customization.primaryColor}10, ${customization.backgroundColor})`
+          : `linear-gradient(135deg, ${merchant.primaryColor}10, ${merchant.primaryColor}05)`,
+        fontFamily: customization?.fontFamily || 'Inter'
       }}
     >
       {/* Header */}
       <div 
         className="bg-white shadow-lg border-b-4"
-        style={{ borderBottomColor: merchant.primaryColor }}
+        style={{ 
+          borderBottomColor: customization?.primaryColor || merchant.primaryColor,
+          background: customization?.chatHeaderStyle === 'gradient' 
+            ? `linear-gradient(135deg, ${customization.primaryColor}, ${customization.secondaryColor})`
+            : 'white'
+        }}
       >
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            {merchant.logoUrl ? (
+            {(customization?.logoUrl || merchant.logoUrl) ? (
               <img 
-                src={merchant.logoUrl} 
+                src={customization?.logoUrl || merchant.logoUrl} 
                 alt={merchant.businessName}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
               <div 
                 className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: merchant.primaryColor }}
+                style={{ 
+                  backgroundColor: customization?.primaryColor || merchant.primaryColor,
+                  borderRadius: customization?.borderRadius || '50%'
+                }}
               >
                 {merchant.businessName.charAt(0)}
               </div>
@@ -444,7 +506,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
               <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
               <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
-                {isStreaming ? 'يكتب...' : 'متصل'}
+                {isStreaming ? (customization?.typingIndicatorText || 'يكتب...') : 'متصل'}
               </span>
             </div>
           </div>
@@ -462,13 +524,21 @@ export default function ChatPage({ params }: ChatPageProps) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-3 rounded-2xl ${
+                className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-3 shadow-lg ${
                   message.role === 'user'
-                    ? 'text-white shadow-lg'
-                    : 'bg-white text-gray-800 shadow-md border'
+                    ? 'text-white'
+                    : 'shadow-md border'
                 }`}
                 style={{
-                  backgroundColor: message.role === 'user' ? merchant.primaryColor : undefined
+                  backgroundColor: message.role === 'user' 
+                    ? (customization?.userMessageColor || merchant.primaryColor)
+                    : (customization?.botMessageColor || '#ffffff'),
+                  color: message.role === 'user' 
+                    ? 'white' 
+                    : (customization?.textColor || '#1f2937'),
+                  borderRadius: customization?.borderRadius || '16px',
+                  ...(customization?.messageStyle === 'flat' && { boxShadow: 'none', border: '1px solid #e5e7eb' }),
+                  ...(customization?.messageStyle === 'bubble' && { borderRadius: '24px 24px 24px 8px' })
                 }}
               >
                 {message.role === 'user' ? (
@@ -541,7 +611,16 @@ export default function ChatPage({ params }: ChatPageProps) {
           {/* Streaming message display */}
           {isStreaming && streamingMessage && (
             <div className="flex justify-start">
-              <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl max-w-xs sm:max-w-md lg:max-w-lg">
+              <div 
+                className="shadow-md border px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg"
+                style={{
+                  backgroundColor: customization?.botMessageColor || '#ffffff',
+                  color: customization?.textColor || '#1f2937',
+                  borderRadius: customization?.borderRadius || '16px',
+                  ...(customization?.messageStyle === 'flat' && { boxShadow: 'none', border: '1px solid #e5e7eb' }),
+                  ...(customization?.messageStyle === 'bubble' && { borderRadius: '24px 24px 8px 24px' })
+                }}
+              >
                 <div className="text-sm leading-relaxed prose prose-sm max-w-none">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -602,7 +681,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                     <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                     <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                   </div>
-                  <span className="text-xs text-blue-500">يكتب...</span>
+                  <span className="text-xs text-blue-500">{customization?.typingIndicatorText || 'يكتب...'}</span>
                 </div>
               </div>
             </div>
@@ -611,7 +690,14 @@ export default function ChatPage({ params }: ChatPageProps) {
           {/* Loading indicator for initial processing */}
           {isLoading && !isStreaming && (
             <div className="flex justify-start">
-              <div className="bg-white text-gray-800 shadow-md border px-4 py-3 rounded-2xl">
+              <div 
+                className="shadow-md border px-4 py-3"
+                style={{
+                  backgroundColor: customization?.botMessageColor || '#ffffff',
+                  color: customization?.textColor || '#1f2937',
+                  borderRadius: customization?.borderRadius || '16px'
+                }}
+              >
                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
@@ -628,15 +714,27 @@ export default function ChatPage({ params }: ChatPageProps) {
         </div>
 
         {/* Input Area */}
-        <div className="bg-white rounded-2xl shadow-lg border p-4">
+        <div 
+          className="shadow-lg border p-4"
+          style={{
+            backgroundColor: customization?.botMessageColor || '#ffffff',
+            borderRadius: customization?.borderRadius || '16px',
+            ...(customization?.inputStyle === 'minimal' && { border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }),
+            ...(customization?.inputStyle === 'modern' && { borderRadius: '24px' })
+          }}
+        >
           <div className="flex items-end space-x-3 rtl:space-x-reverse">
             <div className="flex-1">
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="اكتب رسالتك هنا..."
-                className="resize-none border-0 focus:ring-0 text-base text-gray-900"
+                placeholder={customization?.placeholderText || "اكتب رسالتك هنا..."}
+                className="resize-none border-0 focus:ring-0 text-base"
+                style={{ 
+                  color: customization?.textColor || '#1f2937',
+                  fontFamily: customization?.fontFamily || 'Inter'
+                }}
                 disabled={isLoading}
                 dir="rtl"
               />
@@ -644,16 +742,20 @@ export default function ChatPage({ params }: ChatPageProps) {
             <Button
               onClick={sendMessage}
               disabled={isLoading || !inputMessage.trim()}
-              className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105"
+              className="px-6 py-3 font-medium transition-all duration-200 hover:scale-105"
               style={{ 
-                backgroundColor: merchant.primaryColor,
-                borderColor: merchant.primaryColor
+                backgroundColor: customization?.primaryColor || merchant.primaryColor,
+                borderColor: customization?.primaryColor || merchant.primaryColor,
+                borderRadius: customization?.borderRadius || '12px',
+                ...(customization?.animation === 'bouncy' && { transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)' }),
+                ...(customization?.animation === 'fast' && { transition: 'all 0.1s ease' }),
+                ...(customization?.animation === 'none' && { transition: 'none' })
               }}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                'إرسال'
+                customization?.sendButtonText || 'إرسال'
               )}
             </Button>
           </div>
