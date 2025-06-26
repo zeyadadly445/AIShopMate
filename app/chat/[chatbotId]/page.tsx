@@ -732,29 +732,28 @@ export default function ChatPage({ params }: ChatPageProps) {
                           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
                         ) : (
                           <div className="text-sm sm:text-base leading-relaxed prose prose-sm max-w-none">
-                            {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
+                            {/* Simple and effective content rendering */}
                             {(() => {
                               const content = message.content.trim()
                               
-                              // Check if this is a PURE HTML block (entire content is one HTML element)
-                              const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
-                              const isPureHTMLBlock = htmlTagRegex.test(content)
+                              // Simple check: if content contains HTML tags, use dangerouslySetInnerHTML
+                              const hasHTMLTags = content.includes('<') && content.includes('>')
                               
-                              // Check if content contains HTML blocks mixed with other content
-                              const hasHTMLBlocks = /<[a-zA-Z][a-zA-Z0-9]*[^>]*>[\s\S]*?<\/[a-zA-Z][a-zA-Z0-9]*>/.test(content)
-                              const hasMixedContent = hasHTMLBlocks && (
-                                content.includes('**') || // markdown bold
-                                content.includes('##') || // markdown headers
-                                content.includes('- ') ||  // markdown lists
-                                content.includes('\n\n') || // paragraph breaks
-                                !isPureHTMLBlock // not a single HTML block
-                              )
-                              
-                              // If it's a pure HTML block, render as HTML
-                              if (isPureHTMLBlock && !hasMixedContent) {
+                              if (hasHTMLTags) {
+                                // Convert basic markdown to HTML first
+                                let processedContent = content
+                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
+                                  .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 10px 0; color: #333;">$1</h3>$2') // ### header
+                                  .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 12px 0; color: #333;">$1</h2>$2') // ## header
+                                  .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 15px 0; color: #333;">$1</h1>$2') // # header
+                                  .replace(/^- (.*?)$/gm, '<li style="margin: 2px 0; color: #333;">$1</li>') // - list items
+                                  .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 10px 0; padding-right: 20px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
+                                  .replace(/\n\n/g, '<br><br>') // paragraph breaks
+                                  .replace(/\n/g, '<br>') // line breaks
+                                
                                 return (
                                   <div 
-                                    dangerouslySetInnerHTML={{ __html: content }}
+                                    dangerouslySetInnerHTML={{ __html: processedContent }}
                                     className="prose prose-sm max-w-none"
                                     style={{
                                       color: customization?.textColor || '#1f2937'
@@ -763,7 +762,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 )
                               }
                               
-                              // For mixed content or pure markdown, use ReactMarkdown with rehype-raw
+                              // For pure text/markdown content, use ReactMarkdown
                               return (
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
@@ -884,25 +883,24 @@ export default function ChatPage({ params }: ChatPageProps) {
                           {(() => {
                             const content = streamingMessage.trim()
                             
-                            // Check if this is a PURE HTML block (entire content is one HTML element)
-                            const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
-                            const isPureHTMLBlock = htmlTagRegex.test(content)
+                            // Simple check: if content contains HTML tags, use dangerouslySetInnerHTML
+                            const hasHTMLTags = content.includes('<') && content.includes('>')
                             
-                            // Check if content contains HTML blocks mixed with other content
-                            const hasHTMLBlocks = /<[a-zA-Z][a-zA-Z0-9]*[^>]*>[\s\S]*?<\/[a-zA-Z][a-zA-Z0-9]*>/.test(content)
-                            const hasMixedContent = hasHTMLBlocks && (
-                              content.includes('**') || // markdown bold
-                              content.includes('##') || // markdown headers
-                              content.includes('- ') ||  // markdown lists
-                              content.includes('\n\n') || // paragraph breaks
-                              !isPureHTMLBlock // not a single HTML block
-                            )
-                            
-                            // If it's a pure HTML block, render as HTML
-                            if (isPureHTMLBlock && !hasMixedContent) {
+                            if (hasHTMLTags) {
+                              // Convert basic markdown to HTML first
+                              let processedContent = content
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
+                                .replace(/### (.*?)(\n|$)/g, '<h3 style="font-weight: bold; margin: 10px 0; color: #333;">$1</h3>$2') // ### header
+                                .replace(/## (.*?)(\n|$)/g, '<h2 style="font-weight: bold; margin: 12px 0; color: #333;">$1</h2>$2') // ## header
+                                .replace(/# (.*?)(\n|$)/g, '<h1 style="font-weight: bold; margin: 15px 0; color: #333;">$1</h1>$2') // # header
+                                .replace(/^- (.*?)$/gm, '<li style="margin: 2px 0; color: #333;">$1</li>') // - list items
+                                .replace(/((?:<li.*<\/li>\s*)+)/g, '<ul style="margin: 10px 0; padding-right: 20px; list-style-type: disc;">$1</ul>') // wrap consecutive li in ul
+                                .replace(/\n\n/g, '<br><br>') // paragraph breaks
+                                .replace(/\n/g, '<br>') // line breaks
+                              
                               return (
                                 <div 
-                                  dangerouslySetInnerHTML={{ __html: content }}
+                                  dangerouslySetInnerHTML={{ __html: processedContent }}
                                   className="prose prose-sm max-w-none"
                                   style={{
                                     color: customization?.textColor || '#1f2937'
@@ -911,7 +909,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                               )
                             }
                             
-                            // For mixed content or pure markdown, use ReactMarkdown with rehype-raw
+                            // For pure text/markdown content, use ReactMarkdown
                             return (
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
