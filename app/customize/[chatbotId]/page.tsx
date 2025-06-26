@@ -104,6 +104,8 @@ export default function CustomizePage({ params }: CustomizePageProps) {
 
     try {
       setIsSaving(true)
+      console.log('🔄 Starting save process...')
+      
       const response = await fetch(`/api/chat-appearance/${chatbotId}`, {
         method: 'POST',
         headers: {
@@ -112,16 +114,41 @@ export default function CustomizePage({ params }: CustomizePageProps) {
         body: JSON.stringify(customization),
       })
 
+      const responseData = await response.json()
+      console.log('📡 API Response:', responseData)
+
       if (response.ok) {
         setSavedMessage('✅ تم حفظ التخصيصات بنجاح!')
         setTimeout(() => setSavedMessage(''), 3000)
+        console.log('✅ Save completed successfully')
       } else {
-        throw new Error('فشل في حفظ التخصيصات')
+        console.error('❌ Save failed:', responseData)
+        
+        // رسائل خطأ مخصصة حسب نوع المشكلة
+        let errorMessage = '❌ حدث خطأ في الحفظ'
+        
+        if (responseData.hint) {
+          errorMessage += `\n💡 ${responseData.hint}`
+        } else if (responseData.error === 'ChatCustomization table not found') {
+          errorMessage = '❌ جدول التخصيصات غير موجود\n💡 يجب تطبيق SQL script أولاً'
+        } else if (responseData.error === 'Merchant not found') {
+          errorMessage = '❌ التاجر غير موجود\n💡 تحقق من chatbotId'
+        } else if (responseData.details) {
+          errorMessage += `\n📝 التفاصيل: ${responseData.details}`
+        }
+        
+        setSavedMessage(errorMessage)
+        setTimeout(() => setSavedMessage(''), 5000) // وقت أطول لرسائل الخطأ المفصلة
+        
+        throw new Error(responseData.error || 'فشل في حفظ التخصيصات')
       }
     } catch (error) {
-      console.error('Error saving customization:', error)
-      setSavedMessage('❌ حدث خطأ في الحفظ')
-      setTimeout(() => setSavedMessage(''), 3000)
+      console.error('❌ Critical error in save process:', error)
+      
+      if (!savedMessage.includes('❌')) {
+        setSavedMessage('❌ خطأ في الاتصال بالخادم\n💡 تحقق من اتصال الإنترنت والخادم')
+        setTimeout(() => setSavedMessage(''), 5000)
+      }
     } finally {
       setIsSaving(false)
     }
@@ -209,12 +236,24 @@ export default function CustomizePage({ params }: CustomizePageProps) {
       {/* Save Message */}
       {savedMessage && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className={`p-3 rounded-lg text-center ${
+          <div className={`p-4 rounded-lg text-right ${
             savedMessage.includes('✅') 
               ? 'bg-green-100 text-green-800 border border-green-300' 
               : 'bg-red-100 text-red-800 border border-red-300'
           }`}>
-            {savedMessage}
+            <div className="whitespace-pre-line text-sm font-medium">
+              {savedMessage}
+            </div>
+            {savedMessage.includes('❌') && (
+              <div className="mt-3 pt-3 border-t border-red-200">
+                <p className="text-xs text-red-600 mb-2">🔧 خطوات استكشاف الأخطاء:</p>
+                <ul className="text-xs text-red-600 space-y-1">
+                  <li>• تحقق من تطبيق SQL في Supabase</li>
+                  <li>• راجع console في المتصفح للتفاصيل</li>
+                  <li>• استخدم أداة التشخيص: <code className="bg-red-200 px-1 rounded">/api/debug-customization?chatbotId={chatbotId}</code></li>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
