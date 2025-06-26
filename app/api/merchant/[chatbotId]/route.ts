@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'chatbotId is required' }, { status: 400 })
     }
 
-    // Fetch merchant data using Supabase client
+    // Fetch merchant data using Supabase client (logoUrl removed as it's now in ChatCustomization)
     const { data: merchant, error } = await supabaseAdmin
       .from('Merchant')
       .select(`
@@ -20,7 +20,6 @@ export async function GET(
         businessName,
         welcomeMessage,
         primaryColor,
-        logoUrl,
         email,
         phone,
         subscription:Subscription(
@@ -52,13 +51,13 @@ export async function GET(
         : merchant.subscription
     }
 
-    // Return merchant data (excluding sensitive information)
+    // Return merchant data (excluding sensitive information and logoUrl which is now in ChatCustomization)
     return NextResponse.json({
       id: merchant.id,
       businessName: merchant.businessName,
       welcomeMessage: merchant.welcomeMessage,
       primaryColor: merchant.primaryColor,
-      logoUrl: merchant.logoUrl,
+      // logoUrl removed - now handled by ChatCustomization
       subscription: subscription ? {
         plan: subscription.plan,
         status: subscription.status,

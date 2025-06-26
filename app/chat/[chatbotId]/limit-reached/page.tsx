@@ -6,7 +6,6 @@ import Card from '@/components/ui/Card'
 interface MerchantInfo {
   businessName: string
   primaryColor: string
-  logoUrl?: string
   email?: string
   subscription?: {
     plan: string
@@ -81,20 +80,13 @@ export default function LimitReachedPage({ params }: LimitReachedPageProps) {
         <div className="bg-white shadow-lg border-b-4 border-red-500">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
-              {merchant.logoUrl ? (
-                <img 
-                  src={merchant.logoUrl} 
-                  alt={merchant.businessName}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-gray-500"
-                  style={{ backgroundColor: merchant.primaryColor || '#6B7280' }}
-                >
-                  {merchant.businessName.charAt(0)}
-                </div>
-              )}
+              {/* Logo or Initial */}
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                style={{ backgroundColor: merchant.primaryColor }}
+              >
+                {merchant.businessName.charAt(0)}
+              </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">{merchant.businessName}</h1>
                 <p className="text-sm text-red-600">⚠️ الخدمة غير متاحة مؤقتاً</p>

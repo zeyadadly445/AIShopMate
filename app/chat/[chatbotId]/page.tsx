@@ -15,7 +15,6 @@ interface Merchant {
   businessName: string
   welcomeMessage: string
   primaryColor: string
-  logoUrl?: string
 }
 
 interface ChatCustomization {
@@ -27,15 +26,14 @@ interface ChatCustomization {
   textColor: string
   fontFamily: string
   borderRadius: string
-  chatHeaderStyle: string
+  headerStyle: string
   messageStyle: string
-  inputStyle: string
-  animation: string
+  animationStyle: string
   logoUrl?: string
   welcomeMessage: string
   placeholderText: string
   sendButtonText: string
-  typingIndicatorText: string
+  typingIndicator: string
 }
 
 interface Message {
@@ -474,16 +472,16 @@ export default function ChatPage({ params }: ChatPageProps) {
         className="bg-white shadow-lg border-b-4"
         style={{ 
           borderBottomColor: customization?.primaryColor || merchant.primaryColor,
-          background: customization?.chatHeaderStyle === 'gradient' 
+          background: customization?.headerStyle === 'gradient' 
             ? `linear-gradient(135deg, ${customization.primaryColor}, ${customization.secondaryColor})`
             : 'white'
         }}
       >
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            {(customization?.logoUrl || merchant.logoUrl) ? (
+            {customization?.logoUrl ? (
               <img 
-                src={customization?.logoUrl || merchant.logoUrl} 
+                src={customization.logoUrl} 
                 alt={merchant.businessName}
                 className="w-12 h-12 rounded-full object-cover"
               />
@@ -506,7 +504,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
               <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
               <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
-                {isStreaming ? (customization?.typingIndicatorText || 'يكتب...') : 'متصل'}
+                {isStreaming ? (customization?.typingIndicator || 'يكتب...') : 'متصل'}
               </span>
             </div>
           </div>
@@ -681,7 +679,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                     <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                     <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                   </div>
-                  <span className="text-xs text-blue-500">{customization?.typingIndicatorText || 'يكتب...'}</span>
+                  <span className="text-xs text-blue-500">{customization?.typingIndicator || 'يكتب...'}</span>
                 </div>
               </div>
             </div>
@@ -719,8 +717,8 @@ export default function ChatPage({ params }: ChatPageProps) {
           style={{
             backgroundColor: customization?.botMessageColor || '#ffffff',
             borderRadius: customization?.borderRadius || '16px',
-            ...(customization?.inputStyle === 'minimal' && { border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }),
-            ...(customization?.inputStyle === 'modern' && { borderRadius: '24px' })
+            ...(customization?.animationStyle === 'minimal' && { border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }),
+            ...(customization?.animationStyle === 'modern' && { borderRadius: '24px' })
           }}
         >
           <div className="flex items-end space-x-3 rtl:space-x-reverse">
@@ -747,9 +745,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                 backgroundColor: customization?.primaryColor || merchant.primaryColor,
                 borderColor: customization?.primaryColor || merchant.primaryColor,
                 borderRadius: customization?.borderRadius || '12px',
-                ...(customization?.animation === 'bouncy' && { transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)' }),
-                ...(customization?.animation === 'fast' && { transition: 'all 0.1s ease' }),
-                ...(customization?.animation === 'none' && { transition: 'none' })
+                ...(customization?.animationStyle === 'bouncy' && { transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)' }),
+                ...(customization?.animationStyle === 'fast' && { transition: 'all 0.1s ease' }),
+                ...(customization?.animationStyle === 'none' && { transition: 'none' })
               }}
             >
               {isLoading ? (
