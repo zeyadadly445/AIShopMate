@@ -736,12 +736,22 @@ export default function ChatPage({ params }: ChatPageProps) {
                             {(() => {
                               const content = message.content.trim()
                               
-                              // Simple and universal HTML block detection
+                              // Check if this is a PURE HTML block (entire content is one HTML element)
                               const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
-                              const isHTMLBlock = htmlTagRegex.test(content)
+                              const isPureHTMLBlock = htmlTagRegex.test(content)
                               
-                              // If it's an HTML block, render as pure HTML
-                              if (isHTMLBlock) {
+                              // Check if content contains HTML blocks mixed with other content
+                              const hasHTMLBlocks = /<[a-zA-Z][a-zA-Z0-9]*[^>]*>[\s\S]*?<\/[a-zA-Z][a-zA-Z0-9]*>/.test(content)
+                              const hasMixedContent = hasHTMLBlocks && (
+                                content.includes('**') || // markdown bold
+                                content.includes('##') || // markdown headers
+                                content.includes('- ') ||  // markdown lists
+                                content.includes('\n\n') || // paragraph breaks
+                                !isPureHTMLBlock // not a single HTML block
+                              )
+                              
+                              // If it's a pure HTML block, render as HTML
+                              if (isPureHTMLBlock && !hasMixedContent) {
                                 return (
                                   <div 
                                     dangerouslySetInnerHTML={{ __html: content }}
@@ -753,7 +763,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 )
                               }
                               
-                              // Otherwise, use ReactMarkdown for all other content
+                              // For mixed content or pure markdown, use ReactMarkdown with rehype-raw
                               return (
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
@@ -874,12 +884,22 @@ export default function ChatPage({ params }: ChatPageProps) {
                           {(() => {
                             const content = streamingMessage.trim()
                             
-                            // Simple and universal HTML block detection
+                            // Check if this is a PURE HTML block (entire content is one HTML element)
                             const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
-                            const isHTMLBlock = htmlTagRegex.test(content)
+                            const isPureHTMLBlock = htmlTagRegex.test(content)
                             
-                            // If it's an HTML block, render as pure HTML
-                            if (isHTMLBlock) {
+                            // Check if content contains HTML blocks mixed with other content
+                            const hasHTMLBlocks = /<[a-zA-Z][a-zA-Z0-9]*[^>]*>[\s\S]*?<\/[a-zA-Z][a-zA-Z0-9]*>/.test(content)
+                            const hasMixedContent = hasHTMLBlocks && (
+                              content.includes('**') || // markdown bold
+                              content.includes('##') || // markdown headers
+                              content.includes('- ') ||  // markdown lists
+                              content.includes('\n\n') || // paragraph breaks
+                              !isPureHTMLBlock // not a single HTML block
+                            )
+                            
+                            // If it's a pure HTML block, render as HTML
+                            if (isPureHTMLBlock && !hasMixedContent) {
                               return (
                                 <div 
                                   dangerouslySetInnerHTML={{ __html: content }}
@@ -891,7 +911,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                               )
                             }
                             
-                            // Otherwise, use ReactMarkdown for all other content
+                            // For mixed content or pure markdown, use ReactMarkdown with rehype-raw
                             return (
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
