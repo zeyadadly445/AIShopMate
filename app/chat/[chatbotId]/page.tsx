@@ -779,7 +779,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                   
                                   // Paragraph breaks and line breaks
-                                  .replace(/\n\n+/g, '<div style="margin: 4px 0;"></div>') // paragraph breaks - reduced spacing
+                                  .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
                                   .replace(/\n/g, '<br>') // line breaks
                                 
                                 return (
@@ -958,7 +958,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                 
                                 // Paragraph breaks and line breaks
-                                .replace(/\n\n+/g, '<div style="margin: 4px 0;"></div>') // paragraph breaks - reduced spacing
+                                .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
                                 .replace(/\n/g, '<br>') // line breaks
                               
                               return (
