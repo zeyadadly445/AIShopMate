@@ -736,21 +736,12 @@ export default function ChatPage({ params }: ChatPageProps) {
                             {(() => {
                               const content = message.content.trim()
                               
-                              // Check if this is a STANDALONE complex HTML block (not mixed with markdown)
-                              const lines = content.split('\n').filter(line => line.trim())
-                              const isStandaloneComplexHTMLBlock = (
-                                content.startsWith('<div style=') && 
-                                content.endsWith('</div>') && // Must END with closing div (standalone)
-                                !content.includes('**') && // No markdown bold
-                                !content.includes('##') && // No markdown headers
-                                !content.includes('- ') && // No markdown lists
-                                (content.includes('border-radius') || content.includes('background') || 
-                                 content.includes('gradient') || content.includes('countdown') ||
-                                 lines.length > 3) // Multi-line HTML
-                              )
+                              // Simple and universal HTML block detection
+                              const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
+                              const isHTMLBlock = htmlTagRegex.test(content)
                               
-                              // If it's a standalone complex HTML block, render as pure HTML
-                              if (isStandaloneComplexHTMLBlock) {
+                              // If it's an HTML block, render as pure HTML
+                              if (isHTMLBlock) {
                                 return (
                                   <div 
                                     dangerouslySetInnerHTML={{ __html: content }}
@@ -762,7 +753,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 )
                               }
                               
-                              // Otherwise, ALWAYS use ReactMarkdown for better mixed content support
+                              // Otherwise, use ReactMarkdown for all other content
                               return (
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
@@ -883,21 +874,12 @@ export default function ChatPage({ params }: ChatPageProps) {
                           {(() => {
                             const content = streamingMessage.trim()
                             
-                            // Check if this is a STANDALONE complex HTML block (not mixed with markdown)
-                            const lines = content.split('\n').filter(line => line.trim())
-                            const isStandaloneComplexHTMLBlock = (
-                              content.startsWith('<div style=') && 
-                              content.endsWith('</div>') && // Must END with closing div (standalone)
-                              !content.includes('**') && // No markdown bold
-                              !content.includes('##') && // No markdown headers
-                              !content.includes('- ') && // No markdown lists
-                              (content.includes('border-radius') || content.includes('background') || 
-                               content.includes('gradient') || content.includes('countdown') ||
-                               lines.length > 3) // Multi-line HTML
-                            )
+                            // Simple and universal HTML block detection
+                            const htmlTagRegex = /^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>[\s\S]*<\/\1>$/
+                            const isHTMLBlock = htmlTagRegex.test(content)
                             
-                            // If it's a standalone complex HTML block, render as pure HTML
-                            if (isStandaloneComplexHTMLBlock) {
+                            // If it's an HTML block, render as pure HTML
+                            if (isHTMLBlock) {
                               return (
                                 <div 
                                   dangerouslySetInnerHTML={{ __html: content }}
@@ -909,7 +891,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                               )
                             }
                             
-                            // Otherwise, ALWAYS use ReactMarkdown for better mixed content support
+                            // Otherwise, use ReactMarkdown for all other content
                             return (
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
