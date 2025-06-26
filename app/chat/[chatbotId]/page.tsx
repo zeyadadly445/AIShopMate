@@ -779,7 +779,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                   
                                   // Paragraph breaks and line breaks
-                                  .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks
+                                  .replace(/\n\n+/g, '<div style="margin: 4px 0;"></div>') // paragraph breaks - reduced spacing
                                   .replace(/\n/g, '<br>') // line breaks
                                 
                                 return (
@@ -800,17 +800,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   remarkPlugins={[remarkGfm]}
                                   rehypePlugins={[rehypeHighlight, rehypeRaw]}
                                   components={{
-                                    h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2" {...props} />,
+                                    h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1" {...props} />,
                                     h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-1" {...props} />,
                                     h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-1" {...props} />,
-                                    p: ({node, ...props}) => <p className="text-gray-800 mb-1 sm:mb-2 leading-relaxed" {...props} />,
-                                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
-                                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
+                                    p: ({node, ...props}) => <p className="text-gray-800 mb-0 leading-relaxed" {...props} />,
+                                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 text-gray-800" {...props} />,
+                                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 text-gray-800" {...props} />,
                                     li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                     br: ({node, ...props}) => <br {...props} />,
                                     span: ({node, ...props}) => <span {...props} />,
                                     table: ({node, ...props}) => (
-                                      <div className="overflow-x-auto mb-2 sm:mb-3 rounded-lg border border-gray-200">
+                                      <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200">
                                         <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                       </div>
                                     ),
@@ -824,15 +824,15 @@ export default function ChatPage({ params }: ChatPageProps) {
                                           {children}
                                         </code>
                                       ) : (
-                                        <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-1 sm:my-2 border border-gray-200">
+                                        <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-0 border border-gray-200">
                                           <code {...props}>{children}</code>
                                         </div>
                                       )
                                     },
                                     blockquote: ({node, ...props}) => (
-                                      <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 sm:mb-2 rounded-r-lg text-sm" {...props} />
+                                      <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 rounded-r-lg text-sm" {...props} />
                                     ),
-                                    hr: ({node, ...props}) => <hr className="border-gray-300 my-2 sm:my-3" {...props} />,
+                                    hr: ({node, ...props}) => <hr className="border-gray-300 my-1 sm:my-2" {...props} />,
                                     a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
                                     strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
                                     em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
@@ -958,7 +958,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                 
                                 // Paragraph breaks and line breaks
-                                .replace(/\n\n/g, '<div style="margin: 8px 0;"></div>') // paragraph breaks
+                                .replace(/\n\n+/g, '<div style="margin: 4px 0;"></div>') // paragraph breaks - reduced spacing
                                 .replace(/\n/g, '<br>') // line breaks
                               
                               return (
@@ -979,17 +979,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeHighlight, rehypeRaw]}
                                 components={{
-                                  h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2" {...props} />,
+                                  h1: ({node, ...props}) => <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-1" {...props} />,
                                   h2: ({node, ...props}) => <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-1" {...props} />,
                                   h3: ({node, ...props}) => <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-1" {...props} />,
-                                  p: ({node, ...props}) => <p className="text-gray-800 mb-1 sm:mb-2 leading-relaxed" {...props} />,
-                                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
-                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 sm:mb-2 text-gray-800" {...props} />,
+                                  p: ({node, ...props}) => <p className="text-gray-800 mb-0 leading-relaxed" {...props} />,
+                                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1 text-gray-800" {...props} />,
+                                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1 text-gray-800" {...props} />,
                                   li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                   br: ({node, ...props}) => <br {...props} />,
                                   span: ({node, ...props}) => <span {...props} />,
                                   table: ({node, ...props}) => (
-                                    <div className="overflow-x-auto mb-2 sm:mb-3 rounded-lg border border-gray-200">
+                                    <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200">
                                       <table className="min-w-full text-xs sm:text-sm bg-white" {...props} />
                                     </div>
                                   ),
@@ -1003,15 +1003,15 @@ export default function ChatPage({ params }: ChatPageProps) {
                                         {children}
                                       </code>
                                     ) : (
-                                      <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-1 sm:my-2 border border-gray-200">
+                                      <div className="bg-gray-900 p-2 sm:p-3 lg:p-4 rounded-xl text-xs sm:text-sm font-mono text-green-400 overflow-x-auto my-0 border border-gray-200">
                                         <code {...props}>{children}</code>
                                       </div>
                                     )
                                   },
                                   blockquote: ({node, ...props}) => (
-                                    <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 sm:mb-2 rounded-r-lg text-sm" {...props} />
+                                    <blockquote className="border-l-3 sm:border-l-4 border-blue-400 pl-3 sm:pl-4 py-1 bg-blue-50 text-gray-800 italic mb-1 rounded-r-lg text-sm" {...props} />
                                   ),
-                                  hr: ({node, ...props}) => <hr className="border-gray-300 my-2 sm:my-3" {...props} />,
+                                  hr: ({node, ...props}) => <hr className="border-gray-300 my-1 sm:my-2" {...props} />,
                                   a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
                                   strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
                                   em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
