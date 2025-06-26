@@ -740,6 +740,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                               const hasHTMLTags = content.includes('<') && content.includes('>')
                               
                               if (hasHTMLTags) {
+                                // Check if content has complex HTML tags (div, table, etc.) OR contains style attributes
+                                const hasComplexHTML = /<(div|table|thead|tbody|tr|td|th|section|article|header|footer|main|nav)[^>]*>/i.test(content) || content.includes('style="')
+                                
                                 // Enhanced markdown to HTML conversion with full support
                                 let processedContent = content
                                   // Text formatting
@@ -781,9 +784,12 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   // Tables - ensure full width usage
                                   .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
                                   
-                                  // Paragraph breaks and line breaks
-                                  .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
-                                  .replace(/\n/g, '<br>') // line breaks
+                                  // Only add line breaks for simple HTML content, not complex HTML structures
+                                  if (!hasComplexHTML) {
+                                    processedContent = processedContent
+                                      .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
+                                      .replace(/\n(?![^<]*>)/g, '<br>') // line breaks only outside HTML tags
+                                  }
                                 
                                 return (
                                   <div 
@@ -923,6 +929,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                             const hasHTMLTags = content.includes('<') && content.includes('>')
                             
                             if (hasHTMLTags) {
+                              // Check if content has complex HTML tags (div, table, etc.) OR contains style attributes
+                              const hasComplexHTML = /<(div|table|thead|tbody|tr|td|th|section|article|header|footer|main|nav)[^>]*>/i.test(content) || content.includes('style="')
+                              
                               // Enhanced markdown to HTML conversion with full support
                               let processedContent = content
                                 // Text formatting
@@ -964,9 +973,12 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 // Tables - ensure full width usage
                                 .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
                                 
-                                // Paragraph breaks and line breaks
-                                .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
-                                .replace(/\n/g, '<br>') // line breaks
+                                // Only add line breaks for simple HTML content, not complex HTML structures
+                                if (!hasComplexHTML) {
+                                  processedContent = processedContent
+                                    .replace(/\n\n+/g, '<br>') // paragraph breaks - no extra spacing, just line break
+                                    .replace(/\n(?![^<]*>)/g, '<br>') // line breaks only outside HTML tags
+                                }
                               
                               return (
                                 <div 
