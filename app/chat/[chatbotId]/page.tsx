@@ -436,10 +436,21 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   if (isLoadingMerchant) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-900">جاري تحميل المحادثة...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20">
+          <div className="text-center">
+            <div className="relative mb-8">
+              <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin mx-auto"></div>
+              <div className="w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">جاري تحميل المحادثة</h3>
+            <p className="text-gray-600">يرجى الانتظار لحظة...</p>
+            <div className="mt-6 flex items-center justify-center space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -447,327 +458,528 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   if (!merchant) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
-        <Card className="max-w-md mx-auto text-center p-8">
-          <div className="text-red-500 text-6xl mb-4">❌</div>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-rose-100 flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-pink-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6">
+            ❌
+          </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-4">المتجر غير موجود</h1>
-          <p className="text-gray-900">عذراً، لم نتمكن من العثور على هذا المتجر.</p>
-        </Card>
+          <p className="text-gray-600 mb-6">عذراً، لم نتمكن من العثور على هذا المتجر. يرجى التحقق من الرابط والمحاولة مرة أخرى.</p>
+          <button 
+            onClick={() => window.history.back()}
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-2xl font-medium hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+          >
+            العودة للخلف
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
     <div 
-      className="min-h-screen"
+      className="min-h-screen relative overflow-hidden"
       style={{ 
         background: customization 
-          ? `linear-gradient(135deg, ${customization.primaryColor}10, ${customization.backgroundColor})`
-          : `linear-gradient(135deg, ${merchant.primaryColor}10, ${merchant.primaryColor}05)`,
-        fontFamily: customization?.fontFamily || 'Inter'
+          ? `linear-gradient(135deg, ${customization.primaryColor}08, ${customization.backgroundColor}, ${customization.primaryColor}05)`
+          : `linear-gradient(135deg, ${merchant.primaryColor}08, #f8fafc, ${merchant.primaryColor}05)`,
+        fontFamily: customization?.fontFamily || 'Inter, system-ui, sans-serif'
       }}
     >
+      {/* Animated Background Shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-pink-400/10 to-orange-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-indigo-400/5 to-cyan-400/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+      </div>
+
       {/* Header */}
-      <div 
-        className="bg-white shadow-lg border-b-4"
-        style={{ 
-          borderBottomColor: customization?.primaryColor || merchant.primaryColor,
-          background: customization?.headerStyle === 'gradient' 
-            ? `linear-gradient(135deg, ${customization.primaryColor}, ${customization.secondaryColor})`
-            : 'white'
-        }}
-      >
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            {customization?.logoUrl ? (
-              <img 
-                src={customization.logoUrl} 
-                alt={merchant.businessName}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-            ) : (
-              <div 
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                style={{ 
-                  backgroundColor: customization?.primaryColor || merchant.primaryColor,
-                  borderRadius: customization?.borderRadius || '50%'
-                }}
-              >
-                {merchant.businessName.charAt(0)}
+      <div className="relative z-10">
+        <div 
+          className="backdrop-blur-xl border-b"
+          style={{ 
+            background: customization?.headerStyle === 'gradient' 
+              ? `linear-gradient(135deg, ${customization.primaryColor}e6, ${customization.secondaryColor}e6)`
+              : 'rgba(255, 255, 255, 0.85)',
+            borderColor: customization?.primaryColor ? `${customization.primaryColor}20` : 'rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+            <div className="flex items-center space-x-4 rtl:space-x-reverse">
+              
+              {/* Avatar */}
+              <div className="relative">
+                {customization?.logoUrl ? (
+                  <div className="relative">
+                    <img 
+                      src={customization.logoUrl} 
+                      alt={merchant.businessName}
+                      className="w-14 h-14 rounded-2xl object-cover shadow-lg border-2 border-white/50"
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow-md"></div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div 
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white/30"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${customization?.primaryColor || merchant.primaryColor}, ${customization?.secondaryColor || customization?.primaryColor || merchant.primaryColor}cc)`
+                      }}
+                    >
+                      {merchant.businessName.charAt(0)}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow-md"></div>
+                  </div>
+                )}
               </div>
-            )}
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">{merchant.businessName}</h1>
-              <p className="text-sm text-gray-900">مساعد ذكي • متاح الآن</p>
-            </div>
-            <div className="flex-1"></div>
-            <div className="flex items-center space-x-3 rtl:space-x-reverse">
-              <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-              <span className={`text-sm font-medium ${isStreaming ? 'text-yellow-600' : 'text-green-600'}`}>
-                {isStreaming ? (customization?.typingIndicator || 'يكتب...') : 'متصل'}
-              </span>
+
+              {/* Business Info */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold text-gray-800 truncate">{merchant.businessName}</h1>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-green-600">مساعد ذكي متاح الآن</span>
+                  </div>
+                  {isStreaming && (
+                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                      <div className="flex space-x-1">
+                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-sm font-medium text-blue-600">{customization?.typingIndicator || 'يكتب...'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Indicator */}
+              <div className="hidden sm:flex items-center space-x-3 rtl:space-x-reverse">
+                <div className="text-right">
+                  <div className={`text-sm font-medium ${isStreaming ? 'text-blue-600' : 'text-green-600'}`}>
+                    {isStreaming ? 'جاري الكتابة...' : 'متصل'}
+                  </div>
+                  <div className="text-xs text-gray-500">AI مدعوم بـ</div>
+                </div>
+                <div className={`w-4 h-4 rounded-full shadow-lg ${isStreaming ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`}></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Chat Container */}
-      <div className="max-w-4xl mx-auto p-4 h-[calc(100vh-120px)] flex flex-col">
-        
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto mb-4 space-y-4 pb-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-3 shadow-lg ${
-                  message.role === 'user'
-                    ? 'text-white'
-                    : 'shadow-md border'
-                }`}
-                style={{
-                  backgroundColor: message.role === 'user' 
-                    ? (customization?.userMessageColor || merchant.primaryColor)
-                    : (customization?.botMessageColor || '#ffffff'),
-                  color: message.role === 'user' 
-                    ? 'white' 
-                    : (customization?.textColor || '#1f2937'),
-                  borderRadius: customization?.borderRadius || '16px',
-                  ...(customization?.messageStyle === 'flat' && { boxShadow: 'none', border: '1px solid #e5e7eb' }),
-                  ...(customization?.messageStyle === 'bubble' && { borderRadius: '24px 24px 24px 8px' })
-                }}
-              >
-                {message.role === 'user' ? (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                ) : (
-                  <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeHighlight]}
-                      components={{
-                        // Style headings
-                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-1" {...props} />,
-                        // Style paragraphs
-                        p: ({node, ...props}) => <p className="text-gray-800 mb-2 leading-relaxed" {...props} />,
-                        // Style lists
-                        ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-gray-800" {...props} />,
-                        ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-gray-800" {...props} />,
-                        li: ({node, ...props}) => <li className="text-gray-800 mb-1" {...props} />,
-                        // Style tables
-                        table: ({node, ...props}) => (
-                          <div className="overflow-x-auto mb-3">
-                            <table className="min-w-full border-collapse border border-gray-300 text-xs" {...props} />
-                          </div>
-                        ),
-                        thead: ({node, ...props}) => <thead className="bg-gray-100" {...props} />,
-                        th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 font-bold text-gray-900 text-left" {...props} />,
-                        td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1 text-gray-800" {...props} />,
-                        // Style code blocks
-                        code: ({node, className, children, ...props}) => {
-                          const match = /language-(\w+)/.exec(className || '')
-                          return !match ? (
-                            <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-900" {...props}>
-                              {children}
-                            </code>
-                          ) : (
-                            <code className="block bg-gray-100 p-2 rounded text-xs font-mono text-gray-900 overflow-x-auto" {...props}>
-                              {children}
-                            </code>
-                          )
-                        },
-                        // Style blockquotes
-                        blockquote: ({node, ...props}) => (
-                          <blockquote className="border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 text-gray-800 italic mb-2" {...props} />
-                        ),
-                        // Style horizontal rules
-                        hr: ({node, ...props}) => <hr className="border-gray-300 my-3" {...props} />,
-                        // Style links
-                        a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
-                        // Style strong/bold text
-                        strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
-                        // Style emphasis/italic text
-                        em: ({node, ...props}) => <em className="italic text-gray-800" {...props} />,
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
-                <p className={`text-xs mt-2 ${
-                  message.role === 'user' ? 'text-white/80' : 'text-gray-900'
-                }`}>
-                  {formatGregorianTime(message.timestamp)}
-                </p>
-              </div>
-            </div>
-          ))}
+      <div className="relative z-10 max-w-4xl mx-auto p-4 sm:p-6">
+        <div className="h-[calc(100vh-140px)] flex flex-col">
           
-          {/* Streaming message display */}
-          {isStreaming && streamingMessage && (
-            <div className="flex justify-start">
-              <div 
-                className="shadow-md border px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg"
-                style={{
-                  backgroundColor: customization?.botMessageColor || '#ffffff',
-                  color: customization?.textColor || '#1f2937',
-                  borderRadius: customization?.borderRadius || '16px',
-                  ...(customization?.messageStyle === 'flat' && { boxShadow: 'none', border: '1px solid #e5e7eb' }),
-                  ...(customization?.messageStyle === 'bubble' && { borderRadius: '24px 24px 8px 24px' })
-                }}
-              >
-                <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={{
-                      // Style headings
-                      h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-                      h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
-                      h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-1" {...props} />,
-                      // Style paragraphs
-                      p: ({node, ...props}) => <p className="text-gray-800 mb-2 leading-relaxed" {...props} />,
-                      // Style lists
-                      ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-gray-800" {...props} />,
-                      ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-gray-800" {...props} />,
-                      li: ({node, ...props}) => <li className="text-gray-800 mb-1" {...props} />,
-                      // Style tables
-                      table: ({node, ...props}) => (
-                        <div className="overflow-x-auto mb-3">
-                          <table className="min-w-full border-collapse border border-gray-300 text-xs" {...props} />
-                        </div>
-                      ),
-                      thead: ({node, ...props}) => <thead className="bg-gray-100" {...props} />,
-                      th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 font-bold text-gray-900 text-left" {...props} />,
-                      td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1 text-gray-800" {...props} />,
-                      // Style code blocks
-                      code: ({node, className, children, ...props}) => {
-                        const match = /language-(\w+)/.exec(className || '')
-                        return !match ? (
-                          <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-900" {...props}>
-                            {children}
-                          </code>
-                        ) : (
-                          <code className="block bg-gray-100 p-2 rounded text-xs font-mono text-gray-900 overflow-x-auto" {...props}>
-                            {children}
-                          </code>
-                        )
-                      },
-                      // Style blockquotes
-                      blockquote: ({node, ...props}) => (
-                        <blockquote className="border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 text-gray-800 italic mb-2" {...props} />
-                      ),
-                      // Style horizontal rules
-                      hr: ({node, ...props}) => <hr className="border-gray-300 my-3" {...props} />,
-                      // Style links
-                      a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
-                      // Style strong/bold text
-                      strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
-                      // Style emphasis/italic text
-                      em: ({node, ...props}) => <em className="italic text-gray-800" {...props} />,
-                    }}
-                  >
-                    {streamingMessage}
-                  </ReactMarkdown>
-                </div>
-                <div className="flex items-center space-x-2 rtl:space-x-reverse mt-2">
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                  <span className="text-xs text-blue-500">{customization?.typingIndicator || 'يكتب...'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Loading indicator for initial processing */}
-          {isLoading && !isStreaming && (
-            <div className="flex justify-start">
-              <div 
-                className="shadow-md border px-4 py-3"
-                style={{
-                  backgroundColor: customization?.botMessageColor || '#ffffff',
-                  color: customization?.textColor || '#1f2937',
-                  borderRadius: customization?.borderRadius || '16px'
-                }}
-              >
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                  <span className="text-sm text-gray-900">جاري التحضير...</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div 
-          className="shadow-lg border p-4"
-          style={{
-            backgroundColor: customization?.botMessageColor || '#ffffff',
-            borderRadius: customization?.borderRadius || '16px',
-            ...(customization?.animationStyle === 'minimal' && { border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }),
-            ...(customization?.animationStyle === 'modern' && { borderRadius: '24px' })
-          }}
-        >
-          <div className="flex items-end space-x-3 rtl:space-x-reverse">
-            <div className="flex-1">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={customization?.placeholderText || "اكتب رسالتك هنا..."}
-                className="resize-none border-0 focus:ring-0 text-base"
-                style={{ 
-                  color: customization?.textColor || '#1f2937',
-                  fontFamily: customization?.fontFamily || 'Inter'
-                }}
-                disabled={isLoading}
-                dir="rtl"
-              />
-            </div>
-            <Button
-              onClick={sendMessage}
-              disabled={isLoading || !inputMessage.trim()}
-              className="px-6 py-3 font-medium transition-all duration-200 hover:scale-105"
-              style={{ 
-                backgroundColor: customization?.primaryColor || merchant.primaryColor,
-                borderColor: customization?.primaryColor || merchant.primaryColor,
-                borderRadius: customization?.borderRadius || '12px',
-                ...(customization?.animationStyle === 'bouncy' && { transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)' }),
-                ...(customization?.animationStyle === 'fast' && { transition: 'all 0.1s ease' }),
-                ...(customization?.animationStyle === 'none' && { transition: 'none' })
+          {/* Messages Area */}
+          <div className="flex-1 overflow-hidden">
+            <div 
+              className="h-full overflow-y-auto px-2 pb-4 space-y-6"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: `${customization?.primaryColor || merchant.primaryColor}40 transparent`
               }}
             >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                customization?.sendButtonText || 'إرسال'
+              <style jsx>{`
+                div::-webkit-scrollbar {
+                  width: 6px;
+                }
+                div::-webkit-scrollbar-track {
+                  background: transparent;
+                }
+                div::-webkit-scrollbar-thumb {
+                  background: ${customization?.primaryColor || merchant.primaryColor}40;
+                  border-radius: 10px;
+                }
+                div::-webkit-scrollbar-thumb:hover {
+                  background: ${customization?.primaryColor || merchant.primaryColor}60;
+                }
+              `}</style>
+
+              {messages.map((message, index) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`group relative max-w-xs sm:max-w-md lg:max-w-2xl ${message.role === 'user' ? 'ml-12' : 'mr-12'}`}>
+                    
+                    {/* Message Bubble */}
+                    <div
+                      className={`relative px-5 py-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${
+                        message.role === 'user'
+                          ? 'text-white'
+                          : 'border border-white/20'
+                      }`}
+                      style={{
+                        background: message.role === 'user' 
+                          ? `linear-gradient(135deg, ${customization?.userMessageColor || merchant.primaryColor}, ${customization?.userMessageColor || merchant.primaryColor}dd)`
+                          : `rgba(255, 255, 255, 0.95)`,
+                        color: message.role === 'user' 
+                          ? 'white' 
+                          : (customization?.textColor || '#1f2937'),
+                        borderRadius: message.role === 'user' ? '24px 24px 8px 24px' : '24px 24px 24px 8px',
+                        ...(customization?.messageStyle === 'flat' && { 
+                          boxShadow: 'none', 
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          borderRadius: '12px'
+                        }),
+                        ...(customization?.messageStyle === 'bubble' && { 
+                          borderRadius: message.role === 'user' ? '28px 28px 8px 28px' : '28px 28px 28px 8px'
+                        }),
+                        ...(customization?.messageStyle === 'square' && { 
+                          borderRadius: '8px'
+                        })
+                      }}
+                    >
+                      
+                      {/* Message Content */}
+                      {message.role === 'user' ? (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
+                      ) : (
+                        <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                            components={{
+                              h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-3 border-b border-gray-200 pb-2" {...props} />,
+                              h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
+                              h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-2" {...props} />,
+                              p: ({node, ...props}) => <p className="text-gray-800 mb-3 leading-relaxed" {...props} />,
+                              ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 text-gray-800 space-y-1" {...props} />,
+                              ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-3 text-gray-800 space-y-1" {...props} />,
+                              li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
+                              table: ({node, ...props}) => (
+                                <div className="overflow-x-auto mb-4 rounded-lg border border-gray-200">
+                                  <table className="min-w-full text-xs bg-white" {...props} />
+                                </div>
+                              ),
+                              thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
+                              th: ({node, ...props}) => <th className="border-b border-gray-200 px-3 py-2 font-semibold text-gray-900 text-left" {...props} />,
+                              td: ({node, ...props}) => <td className="border-b border-gray-100 px-3 py-2 text-gray-800" {...props} />,
+                              code: ({node, className, children, ...props}) => {
+                                const match = /language-(\w+)/.exec(className || '')
+                                return !match ? (
+                                  <code className="bg-gray-100 px-2 py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
+                                    {children}
+                                  </code>
+                                ) : (
+                                  <div className="bg-gray-900 p-4 rounded-xl text-xs font-mono text-green-400 overflow-x-auto my-3 border border-gray-200">
+                                    <code {...props}>{children}</code>
+                                  </div>
+                                )
+                              },
+                              blockquote: ({node, ...props}) => (
+                                <blockquote className="border-l-4 border-blue-400 pl-4 py-2 bg-blue-50 text-gray-800 italic mb-3 rounded-r-lg" {...props} />
+                              ),
+                              hr: ({node, ...props}) => <hr className="border-gray-300 my-4" {...props} />,
+                              a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline font-medium" {...props} />,
+                              strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                              em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
+                      {/* Timestamp */}
+                      <div className={`text-xs mt-3 flex items-center justify-between ${
+                        message.role === 'user' ? 'text-white/80' : 'text-gray-500'
+                      }`}>
+                        <span>{formatGregorianTime(message.timestamp)}</span>
+                        {message.role === 'user' && (
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 bg-white/60 rounded-full"></div>
+                            <div className="w-1 h-1 bg-white/60 rounded-full"></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Message tail */}
+                      <div 
+                        className={`absolute bottom-0 w-4 h-4 transform rotate-45 ${
+                          message.role === 'user' ? 'right-2' : 'left-2'
+                        }`}
+                        style={{
+                          background: message.role === 'user' 
+                            ? `linear-gradient(135deg, ${customization?.userMessageColor || merchant.primaryColor}, ${customization?.userMessageColor || merchant.primaryColor}dd)`
+                            : 'rgba(255, 255, 255, 0.95)',
+                        }}
+                      ></div>
+                    </div>
+
+                    {/* Avatar for bot messages */}
+                    {message.role === 'assistant' && (
+                      <div className="absolute -bottom-2 -left-3">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white"
+                          style={{ 
+                            background: `linear-gradient(135deg, ${customization?.primaryColor || merchant.primaryColor}, ${customization?.secondaryColor || customization?.primaryColor || merchant.primaryColor}cc)`
+                          }}
+                        >
+                          🤖
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Streaming message display */}
+              {isStreaming && streamingMessage && (
+                <div className="flex justify-start">
+                  <div className="group relative max-w-xs sm:max-w-md lg:max-w-2xl mr-12">
+                    <div 
+                      className="relative px-5 py-4 backdrop-blur-sm border border-white/20 shadow-lg"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: customization?.textColor || '#1f2937',
+                        borderRadius: '24px 24px 24px 8px',
+                      }}
+                    >
+                      <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            h1: ({node, ...props}) => <h1 className="text-lg font-bold text-gray-900 mb-3 border-b border-gray-200 pb-2" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-base font-bold text-gray-900 mb-2" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-sm font-bold text-gray-900 mb-2" {...props} />,
+                            p: ({node, ...props}) => <p className="text-gray-800 mb-3 leading-relaxed" {...props} />,
+                            code: ({node, className, children, ...props}) => {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !match ? (
+                                <code className="bg-gray-100 px-2 py-1 rounded-md text-xs font-mono text-gray-900 border" {...props}>
+                                  {children}
+                                </code>
+                              ) : (
+                                <div className="bg-gray-900 p-4 rounded-xl text-xs font-mono text-green-400 overflow-x-auto my-3 border border-gray-200">
+                                  <code {...props}>{children}</code>
+                                </div>
+                              )
+                            },
+                          }}
+                        >
+                          {streamingMessage}
+                        </ReactMarkdown>
+                      </div>
+                      
+                      {/* Typing indicator */}
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse mt-3">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                        <span className="text-xs text-blue-600 font-medium">{customization?.typingIndicator || 'يكتب...'}</span>
+                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                      </div>
+
+                      {/* Message tail */}
+                      <div 
+                        className="absolute bottom-0 left-2 w-4 h-4 transform rotate-45"
+                        style={{ background: 'rgba(255, 255, 255, 0.95)' }}
+                      ></div>
+                    </div>
+
+                    {/* Streaming Avatar */}
+                    <div className="absolute -bottom-2 -left-3">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white animate-pulse"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${customization?.primaryColor || merchant.primaryColor}, ${customization?.secondaryColor || customization?.primaryColor || merchant.primaryColor}cc)`
+                        }}
+                      >
+                        ✨
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
+              
+              {/* Loading indicator for initial processing */}
+              {isLoading && !isStreaming && (
+                <div className="flex justify-start">
+                  <div className="group relative max-w-xs sm:max-w-md lg:max-w-2xl mr-12">
+                    <div 
+                      className="relative px-5 py-4 backdrop-blur-sm border border-white/20 shadow-lg"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: '24px 24px 24px 8px'
+                      }}
+                    >
+                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                        <div className="flex space-x-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-bounce"></div>
+                          <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">جاري التحضير والتفكير...</span>
+                      </div>
+
+                      {/* Message tail */}
+                      <div 
+                        className="absolute bottom-0 left-2 w-4 h-4 transform rotate-45"
+                        style={{ background: 'rgba(255, 255, 255, 0.95)' }}
+                      ></div>
+                    </div>
+
+                    {/* Loading Avatar */}
+                    <div className="absolute -bottom-2 -left-3">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${customization?.primaryColor || merchant.primaryColor}, ${customization?.secondaryColor || customization?.primaryColor || merchant.primaryColor}cc)`
+                        }}
+                      >
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
           </div>
-          
-          <div className="mt-3 flex items-center justify-end text-xs text-gray-900">
-            <p className="flex items-center space-x-1 rtl:space-x-reverse">
-              <span>مدعوم بـ</span>
-              <span className="font-semibold" style={{ color: merchant.primaryColor }}>
-                AI Shop Mate
-              </span>
-              {isStreaming && (
-                <span className="text-blue-500 animate-pulse">• live streaming</span>
-              )}
-            </p>
+
+          {/* Input Area */}
+          <div className="relative z-10 mt-6">
+            <div 
+              className="backdrop-blur-xl border border-white/20 p-4 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.85)',
+                borderRadius: '28px',
+              }}
+            >
+              <div className="flex items-end space-x-4 rtl:space-x-reverse">
+                
+                {/* Input Container */}
+                <div className="flex-1 relative">
+                  <div className="relative">
+                    <Input
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder=""
+                      className="w-full px-6 py-4 text-base border-0 bg-white/60 backdrop-blur-sm rounded-2xl focus:ring-2 focus:ring-offset-0 transition-all duration-300 placeholder-transparent peer resize-none min-h-[56px]"
+                      style={{ 
+                        color: customization?.textColor || '#1f2937',
+                        fontFamily: customization?.fontFamily || 'Inter, system-ui, sans-serif',
+                        borderColor: 'transparent'
+                      }}
+                      disabled={isLoading}
+                      dir="rtl"
+                    />
+                    
+                    {/* Floating Label */}
+                    <label 
+                      className={`absolute right-6 transition-all duration-300 pointer-events-none ${
+                        inputMessage 
+                          ? 'top-2 text-xs font-medium' 
+                          : 'top-1/2 transform -translate-y-1/2 text-base'
+                      }`}
+                      style={{ 
+                        color: inputMessage 
+                          ? (customization?.primaryColor || merchant.primaryColor)
+                          : '#9ca3af'
+                      }}
+                    >
+                      {customization?.placeholderText || "اكتب رسالتك هنا..."}
+                    </label>
+                    
+                    {/* Character Counter */}
+                    {inputMessage.length > 0 && (
+                      <div className="absolute left-3 bottom-2 text-xs text-gray-400">
+                        {inputMessage.length}
+                      </div>
+                    )}
+                    
+                    {/* Voice Input Button (Future Feature) */}
+                    <button 
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
+                      disabled
+                    >
+                      🎤
+                    </button>
+                  </div>
+                </div>
+
+                {/* Send Button */}
+                <div className="relative">
+                  <Button
+                    onClick={sendMessage}
+                    disabled={isLoading || !inputMessage.trim()}
+                    className="w-14 h-14 rounded-2xl font-medium transition-all duration-300 hover:scale-105 disabled:hover:scale-100 shadow-lg border-0 flex items-center justify-center relative overflow-hidden group"
+                    style={{ 
+                      background: !isLoading && inputMessage.trim() 
+                        ? `linear-gradient(135deg, ${customization?.primaryColor || merchant.primaryColor}, ${customization?.secondaryColor || customization?.primaryColor || merchant.primaryColor}cc)`
+                        : '#e5e7eb',
+                      color: !isLoading && inputMessage.trim() ? 'white' : '#9ca3af'
+                    }}
+                  >
+                    {/* Button Background Animation */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    
+                    {/* Button Content */}
+                    <div className="relative z-10">
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      ) : inputMessage.trim() ? (
+                        <div className="flex items-center justify-center">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </Button>
+                  
+                  {/* Send Button Tooltip */}
+                  {inputMessage.trim() && !isLoading && (
+                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      {customization?.sendButtonText || 'إرسال'}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Input Footer */}
+              <div className="mt-4 flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse text-gray-500">
+                  <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                    <span>اضغط</span>
+                    <kbd className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-xs font-mono">Enter</kbd>
+                    <span>للإرسال</span>
+                  </div>
+                  {isStreaming && (
+                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-blue-600 font-medium">استجابة مباشرة</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="flex items-center space-x-1 rtl:space-x-reverse text-gray-400">
+                    <span>مدعوم بـ</span>
+                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      AI Shop Mate
+                    </span>
+                  </div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
