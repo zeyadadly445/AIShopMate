@@ -902,7 +902,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                 ))}
                 
                 {/* Streaming message display */}
-                {isStreaming && streamingMessage && (
+                {isStreaming && (
                   <div className="flex justify-start">
                     <div className="group relative max-w-[95%] mr-2">
                       <div 
@@ -923,7 +923,16 @@ export default function ChatPage({ params }: ChatPageProps) {
                         <div className="text-sm sm:text-base md:text-lg leading-relaxed w-full">
                           {/* Smart content detection - Complex HTML blocks vs Mixed simple content */}
                           {(() => {
-                            const content = streamingMessage.trim()
+                            const content = (streamingMessage || '').trim()
+                            
+                            // If no content yet, show typing message
+                            if (!content) {
+                              return (
+                                <div className="text-gray-500 italic">
+                                  {customization?.typingIndicator || 'جاري الكتابة...'}
+                                </div>
+                              )
+                            }
                             
                             // Smart check: if content contains HTML tags, use dangerouslySetInnerHTML with enhanced markdown
                             const hasHTMLTags = content.includes('<') && content.includes('>')
