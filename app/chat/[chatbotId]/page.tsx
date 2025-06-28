@@ -745,6 +745,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 
                                 // Enhanced markdown to HTML conversion with full support
                                 let processedContent = content
+                                  // Images: @URL format to HTML img tags
+                                  .replace(/@(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="صورة" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 8px 0; display: block;" loading="lazy" />')
+                                  
                                   // Text formatting
                                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
                                   .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>') // *italic* (not part of **)
@@ -781,8 +784,10 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
                                   .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                   
-                                  // Tables - ensure full width usage
+                                  // Tables - ensure full width usage with image support
                                   .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
+                                  // Style images inside table cells to be smaller and fit well
+                                  .replace(/<td([^>]*)>([^<]*)<img([^>]*)style="([^"]*)"([^>]*)>([^<]*)<\/td>/g, '<td$1>$2<img$3style="max-width: 120px; max-height: 80px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);"$5>$6</td>')
                                   
                                   // Only add line breaks for simple HTML content, not complex HTML structures
                                   if (!hasComplexHTML) {
@@ -819,6 +824,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                     li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                     br: ({node, ...props}) => <br {...props} />,
                                     span: ({node, ...props}) => <span {...props} />,
+                                    img: ({node, ...props}) => (
+                                      <div className="my-2 flex justify-center">
+                                        <img 
+                                          {...props} 
+                                          className="max-w-full h-auto rounded-lg shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300" 
+                                          style={{ maxHeight: '400px', objectFit: 'contain' }}
+                                          loading="lazy"
+                                          alt={props.alt || 'صورة'}
+                                        />
+                                      </div>
+                                    ),
                                     table: ({node, ...props}) => (
                                       <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200 w-full">
                                         <table className="w-full text-xs sm:text-sm bg-white" {...props} />
@@ -848,7 +864,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                     em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
                                   }}
                                 >
-                                  {content}
+                                  {content.replace(/@(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '![$1]($1)')}
                                 </ReactMarkdown>
                               )
                             })()}
@@ -943,6 +959,9 @@ export default function ChatPage({ params }: ChatPageProps) {
                               
                               // Enhanced markdown to HTML conversion with full support
                               let processedContent = content
+                                // Images: @URL format to HTML img tags
+                                .replace(/@(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="صورة" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 8px 0; display: block;" loading="lazy" />')
+                                
                                 // Text formatting
                                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
                                 .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>') // *italic* (not part of **)
@@ -979,8 +998,10 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 .replace(/((?:<li.*list-style-type: square.*<\/li>\s*)+)/g, '<ul style="margin: 5px 0; padding-right: 15px; list-style-type: square;">$1</ul>')
                                 .replace(/((?:<li.*value=.*<\/li>\s*)+)/g, '<ol style="margin: 5px 0; padding-right: 15px;">$1</ol>')
                                 
-                                // Tables - ensure full width usage
+                                // Tables - ensure full width usage with image support
                                 .replace(/<table([^>]*)>/g, '<table$1 style="width: 100%; border-collapse: collapse; margin: 5px 0;">')
+                                // Style images inside table cells to be smaller and fit well
+                                .replace(/<td([^>]*)>([^<]*)<img([^>]*)style="([^"]*)"([^>]*)>([^<]*)<\/td>/g, '<td$1>$2<img$3style="max-width: 120px; max-height: 80px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);"$5>$6</td>')
                                 
                                 // Only add line breaks for simple HTML content, not complex HTML structures
                                 if (!hasComplexHTML) {
@@ -1017,6 +1038,17 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   li: ({node, ...props}) => <li className="text-gray-800" {...props} />,
                                   br: ({node, ...props}) => <br {...props} />,
                                   span: ({node, ...props}) => <span {...props} />,
+                                  img: ({node, ...props}) => (
+                                    <div className="my-2 flex justify-center">
+                                      <img 
+                                        {...props} 
+                                        className="max-w-full h-auto rounded-lg shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300" 
+                                        style={{ maxHeight: '400px', objectFit: 'contain' }}
+                                        loading="lazy"
+                                        alt={props.alt || 'صورة'}
+                                      />
+                                    </div>
+                                  ),
                                   table: ({node, ...props}) => (
                                     <div className="overflow-x-auto mt-1 rounded-lg border border-gray-200 w-full">
                                       <table className="w-full text-xs sm:text-sm bg-white" {...props} />
@@ -1046,7 +1078,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
                                 }}
                               >
-                                {content}
+                                {content.replace(/@(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '![$1]($1)')}
                               </ReactMarkdown>
                             )
                           })()}
